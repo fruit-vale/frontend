@@ -16,7 +16,7 @@ function Home() {
           <img src={viteLogo} className="vite" alt="Vite logo" />
         </div>
         <div>
-          <h1>Get started</h1>
+          <h1>Branch da lenda</h1>
           <p>
             Edit <code>src/pages/Home.tsx</code> and save to test <code>HMR</code>
           </p>
