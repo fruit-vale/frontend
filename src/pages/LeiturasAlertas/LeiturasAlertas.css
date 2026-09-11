@@ -1,0 +1,439 @@
+.leituras-page {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* CABEÇALHO */
+
+.leituras-page__header {
+  margin-bottom: 32px;
+}
+
+.leituras-page__eyebrow {
+  display: block;
+  margin-bottom: 8px;
+
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+
+  color: #2a6e3f;
+}
+
+.leituras-page__header h1 {
+  margin: 0 0 8px;
+
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -1px;
+
+  color: #08060d;
+}
+
+.leituras-page__header p {
+  margin: 0;
+
+  font-size: 16px;
+  color: #6b6375;
+}
+
+/* RESUMO */
+
+.leituras-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+
+  margin-bottom: 36px;
+}
+
+.leitura-summary-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  padding: 20px;
+
+  background-color: #ffffff;
+  border: 1px solid #e5e4e7;
+  border-radius: 14px;
+
+  box-shadow: 0 4px 12px rgba(77, 57, 43, 0.05);
+}
+
+.leitura-summary-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 46px;
+  height: 46px;
+
+  border-radius: 12px;
+
+  background-color: #fdf7e7;
+
+  font-size: 22px;
+}
+
+.leitura-summary-card div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.leitura-summary-card strong {
+  font-size: 22px;
+  color: #4d392b;
+}
+
+.leitura-summary-card div span {
+  font-size: 13px;
+  color: #6b6375;
+}
+
+/* CABEÇALHO DAS LEITURAS */
+
+.leituras-content__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-bottom: 18px;
+}
+
+.leituras-content__header h2,
+.alertas-section__header h2 {
+  margin: 0 0 4px;
+
+  font-size: 22px;
+  color: #4d392b;
+}
+
+.leituras-content__header p,
+.alertas-section__header p {
+  margin: 0;
+
+  font-size: 14px;
+  color: #6b6375;
+}
+
+.leituras-content__header select {
+  padding: 9px 12px;
+
+  border: 1px solid #e5e4e7;
+  border-radius: 9px;
+
+  background-color: #ffffff;
+  color: #4d392b;
+
+  font-size: 14px;
+
+  cursor: pointer;
+}
+
+/* LISTA DE LEITURAS */
+
+.leituras-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.leitura-card {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr auto;
+
+  align-items: center;
+  gap: 20px;
+
+  padding: 18px 20px;
+
+  background-color: #ffffff;
+  border: 1px solid #e5e4e7;
+  border-radius: 12px;
+
+  box-shadow: 0 3px 10px rgba(77, 57, 43, 0.04);
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.leitura-card:hover {
+  transform: translateY(-2px);
+
+  box-shadow: 0 7px 16px rgba(77, 57, 43, 0.08);
+}
+
+/* SENSOR */
+
+.leitura-card__sensor {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.leitura-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  width: 42px;
+  height: 42px;
+
+  border-radius: 10px;
+
+  background-color: #fdf7e7;
+
+  font-size: 19px;
+}
+
+.leitura-card__sensor div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.leitura-card__sensor strong {
+  font-size: 14px;
+  font-weight: 600;
+
+  color: #4d392b;
+}
+
+.leitura-card__sensor span {
+  font-size: 12px;
+  color: #8a8490;
+}
+
+/* VALOR */
+
+.leitura-card__value {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.leitura-card__value > span {
+  font-size: 11px;
+  color: #8a8490;
+}
+
+.leitura-card__value strong {
+  font-size: 20px;
+  color: #4b24ba;
+}
+
+.leitura-card__value small {
+  margin-left: 2px;
+
+  font-size: 11px;
+  font-weight: 500;
+
+  color: #6b6375;
+}
+
+/* HORÁRIO */
+
+.leitura-card__time {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.leitura-card__time span {
+  font-size: 11px;
+  color: #8a8490;
+}
+
+.leitura-card__time strong {
+  font-size: 13px;
+  color: #4d392b;
+}
+
+/* STATUS */
+
+.leitura-status {
+  width: fit-content;
+
+  padding: 6px 9px;
+
+  border-radius: 20px;
+
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.leitura-status--normal {
+  background-color: #e8f5ec;
+  color: #2a6e3f;
+}
+
+.leitura-status--atenção {
+  background-color: #fff4d9;
+  color: #9a6b00;
+}
+
+.leitura-status--critico {
+  background-color: #f5eeee;
+  color: #9b4b4b;
+}
+
+/* ALERTAS */
+
+.alertas-section {
+  margin-top: 36px;
+}
+
+.alertas-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-bottom: 18px;
+}
+
+.alertas-section__header button {
+  border: none;
+  background: transparent;
+
+  color: #4b24ba;
+
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.alertas-section__header button:hover {
+  text-decoration: underline;
+}
+
+.alertas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.alerta-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  padding: 16px 18px;
+
+  border-radius: 12px;
+
+  background-color: #ffffff;
+
+  border: 1px solid #e5e4e7;
+}
+
+.alerta-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 40px;
+  height: 40px;
+
+  flex-shrink: 0;
+
+  border-radius: 10px;
+
+  font-size: 18px;
+}
+
+.alerta-card--warning {
+  border-left: 4px solid #f4a817;
+}
+
+.alerta-card--warning .alerta-card__icon {
+  background-color: #fff4d9;
+}
+
+.alerta-card--critical {
+  border-left: 4px solid #9b4b4b;
+}
+
+.alerta-card--critical .alerta-card__icon {
+  background-color: #f5eeee;
+}
+
+.alerta-card div {
+  flex: 1;
+}
+
+.alerta-card strong {
+  display: block;
+
+  margin-bottom: 3px;
+
+  font-size: 13px;
+  color: #4d392b;
+}
+
+.alerta-card p {
+  margin: 0;
+
+  font-size: 12px;
+  color: #8a8490;
+}
+
+.alerta-card__time {
+  font-size: 11px;
+  color: #8a8490;
+}
+
+/* RESPONSIVO */
+
+@media (max-width: 900px) {
+  .leituras-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .leitura-card {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .leitura-status {
+    justify-self: start;
+  }
+}
+
+@media (max-width: 700px) {
+  .leituras-content__header,
+  .alertas-section__header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .leituras-content__header select {
+    width: 100%;
+  }
+
+  .leitura-card {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .leitura-card__value,
+  .leitura-card__time {
+    padding-left: 54px;
+  }
+}
+
+@media (max-width: 480px) {
+  .leituras-page__header h1 {
+    font-size: 28px;
+  }
+
+  .leitura-card {
+    padding: 16px;
+  }
+}

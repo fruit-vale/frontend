@@ -1,0 +1,365 @@
+.sensores-page {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* CABEÇALHO */
+
+.sensores-page__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.sensores-page__eyebrow {
+  display: block;
+  margin-bottom: 8px;
+
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+
+  color: #2a6e3f;
+}
+
+.sensores-page__header h1 {
+  margin: 0 0 8px;
+
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -1px;
+
+  color: #08060d;
+}
+
+.sensores-page__header p {
+  margin: 0;
+
+  font-size: 16px;
+  color: #6b6375;
+}
+
+.sensores-page__add {
+  border: none;
+  border-radius: 10px;
+
+  padding: 12px 18px;
+
+  background-color: #4b24ba;
+  color: #ffffff;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.sensores-page__add:hover {
+  background-color: #3d1d99;
+  transform: translateY(-1px);
+}
+
+/* RESUMO */
+
+.sensores-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+
+  margin-bottom: 36px;
+}
+
+.sensor-summary-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  padding: 20px;
+
+  background-color: #ffffff;
+  border: 1px solid #e5e4e7;
+  border-radius: 14px;
+
+  box-shadow: 0 4px 12px rgba(77, 57, 43, 0.05);
+}
+
+.sensor-summary-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 46px;
+  height: 46px;
+
+  border-radius: 12px;
+
+  background-color: #fdf7e7;
+
+  font-size: 22px;
+}
+
+.sensor-summary-card div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sensor-summary-card strong {
+  font-size: 22px;
+  color: #4d392b;
+}
+
+.sensor-summary-card div span {
+  font-size: 13px;
+  color: #6b6375;
+}
+
+/* CABEÇALHO DA LISTA */
+
+.sensores-list__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-bottom: 18px;
+}
+
+.sensores-list__header h2 {
+  margin: 0 0 4px;
+
+  font-size: 22px;
+  color: #4d392b;
+}
+
+.sensores-list__header p {
+  margin: 0;
+
+  font-size: 14px;
+  color: #6b6375;
+}
+
+.sensores-list__header select {
+  padding: 9px 12px;
+
+  border: 1px solid #e5e4e7;
+  border-radius: 9px;
+
+  background-color: #ffffff;
+  color: #4d392b;
+
+  font-size: 14px;
+
+  cursor: pointer;
+}
+
+/* TABELA */
+
+.sensores-table {
+  width: 100%;
+
+  background-color: #ffffff;
+  border: 1px solid #e5e4e7;
+  border-radius: 14px;
+
+  overflow: hidden;
+
+  box-shadow: 0 4px 12px rgba(77, 57, 43, 0.05);
+}
+
+.sensores-table__head,
+.sensor-row {
+  display: grid;
+  grid-template-columns:
+    minmax(190px, 1.5fr)
+    minmax(130px, 1fr)
+    minmax(150px, 1.2fr)
+    minmax(120px, 1fr)
+    90px
+    60px;
+
+  align-items: center;
+  gap: 16px;
+
+  padding: 16px 20px;
+}
+
+.sensores-table__head {
+  background-color: #fdf7e7;
+
+  border-bottom: 1px solid #e5e4e7;
+
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+
+  color: #6b6375;
+}
+
+.sensor-row {
+  min-height: 72px;
+
+  border-bottom: 1px solid #eeeeef;
+
+  transition: background-color 0.2s ease;
+}
+
+.sensor-row:last-child {
+  border-bottom: none;
+}
+
+.sensor-row:hover {
+  background-color: #faf9fc;
+}
+
+/* NOME DO SENSOR */
+
+.sensor-row__name {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sensor-row__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  width: 40px;
+  height: 40px;
+
+  border-radius: 10px;
+
+  background-color: #fdf7e7;
+
+  font-size: 19px;
+}
+
+.sensor-row__name div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+
+  min-width: 0;
+}
+
+.sensor-row__name strong {
+  font-size: 13px;
+  font-weight: 600;
+
+  color: #4d392b;
+}
+
+.sensor-row__name div span {
+  font-size: 11px;
+  color: #8a8490;
+}
+
+/* DEMAIS INFORMAÇÕES */
+
+.sensor-row__type,
+.sensor-row__plantacao,
+.sensor-row__reading {
+  font-size: 12px;
+  color: #6b6375;
+}
+
+.sensor-row__plantacao {
+  color: #4d392b;
+}
+
+/* STATUS */
+
+.sensor-status {
+  width: fit-content;
+
+  padding: 6px 9px;
+
+  border-radius: 20px;
+
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.sensor-status--ativo {
+  background-color: #e8f5ec;
+  color: #2a6e3f;
+}
+
+.sensor-status--inativo {
+  background-color: #f5eeee;
+  color: #9b4b4b;
+}
+
+/* BOTÃO */
+
+.sensor-row__details {
+  padding: 0;
+
+  border: none;
+  background: transparent;
+
+  color: #4b24ba;
+
+  font-size: 12px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.sensor-row__details:hover {
+  text-decoration: underline;
+}
+
+/* RESPONSIVO */
+
+@media (max-width: 1000px) {
+  .sensores-table {
+    overflow-x: auto;
+  }
+
+  .sensores-table__head,
+  .sensor-row {
+    min-width: 850px;
+  }
+}
+
+@media (max-width: 800px) {
+  .sensores-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .sensores-page__header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sensores-page__add {
+    width: 100%;
+  }
+}
+
+@media (max-width: 600px) {
+  .sensores-list__header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .sensores-list__header select {
+    width: 100%;
+  }
+
+  .sensores-page__header h1 {
+    font-size: 28px;
+  }
+}
