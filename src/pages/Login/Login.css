@@ -1,0 +1,263 @@
+.login-page {
+  --dusk: #241a33;
+  --dusk-2: #171022;
+  --paper: #f3ead3;
+  --ink: #f6f1e7;
+  --muted: #b7a6c9;
+  --gold: #e0a83d;
+  --gold-dark: #b9822a;
+  --vine: #7fae82;
+
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+
+  background-color: var(--dusk);
+  font-family: 'Schibsted Grotesk', 'Segoe UI', Arial, sans-serif;
+}
+
+.login-page__art {
+  position: relative;
+  flex: 1.5;
+
+  display: none;
+}
+
+.login-page__art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.login-page__art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    rgba(23, 16, 34, 0) 62%,
+    var(--dusk) 100%
+  );
+}
+
+.login-page__panel {
+  position: relative;
+  flex: 1;
+  min-width: 380px;
+
+  display: flex;
+  align-items: center;
+
+  background: radial-gradient(
+    120% 140% at 0% 0%,
+    var(--dusk) 0%,
+    var(--dusk-2) 100%
+  );
+}
+
+.login-panel__inner {
+  width: 100%;
+  max-width: 380px;
+  margin: 0 auto;
+  padding: 48px 40px;
+  box-sizing: border-box;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .login-form {
+    animation: login-rise 0.5s ease-out;
+  }
+}
+
+@keyframes login-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.login-form h1 {
+  margin: 0 0 10px;
+
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 32px;
+  font-weight: 500;
+  font-optical-sizing: auto;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+
+  color: var(--ink);
+}
+
+.login-form__subtitle {
+  margin: 0 0 32px;
+  max-width: 30ch;
+
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.login-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+
+  margin-bottom: 18px;
+
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.login-form__field input {
+  padding: 12px 14px;
+
+  background-color: rgba(243, 234, 211, 0.05);
+  border: 1px solid rgba(183, 166, 201, 0.28);
+  border-radius: 5px;
+
+  font-family: inherit;
+  font-size: 14.5px;
+  color: var(--ink);
+
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.login-form__field input::placeholder {
+  color: rgba(183, 166, 201, 0.55);
+}
+
+.login-form__field input:hover {
+  border-color: rgba(183, 166, 201, 0.45);
+}
+
+.login-form__field input:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+  border-color: var(--gold);
+  background-color: rgba(243, 234, 211, 0.08);
+}
+
+.login-form__error {
+  margin: -6px 0 18px;
+
+  font-size: 13px;
+  font-weight: 500;
+  color: #e8967f;
+}
+
+.login-form__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-bottom: 28px;
+
+  font-size: 13px;
+}
+
+.login-form__remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+}
+
+.login-form__remember input {
+  accent-color: var(--gold);
+}
+
+.login-form__link {
+  border: none;
+  background: none;
+  padding: 0;
+
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--vine);
+  text-decoration: none;
+  font-weight: 500;
+
+  cursor: pointer;
+}
+
+.login-form__link:hover {
+  text-decoration: underline;
+}
+
+.login-form__link:focus-visible,
+.login-form__signup a:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.login-form__submit {
+  width: 100%;
+
+  border: none;
+  border-radius: 5px;
+
+  padding: 13px;
+
+  background-color: var(--gold);
+  color: var(--dusk-2);
+
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: background-color 0.15s ease;
+}
+
+.login-form__submit:hover {
+  background-color: var(--gold-dark);
+}
+
+.login-form__submit:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.login-form__signup {
+  margin: 22px 0 0;
+
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.login-form__signup a {
+  color: var(--vine);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.login-form__signup a:hover {
+  text-decoration: underline;
+}
+
+@media (min-width: 860px) {
+  .login-page__art {
+    display: block;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-panel__inner {
+    padding: 40px 24px;
+  }
+
+  .login-form h1 {
+    font-size: 27px;
+  }
+}
