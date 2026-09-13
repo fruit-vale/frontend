@@ -1,0 +1,180 @@
+.cultivos-page {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.cultivos-page__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.cultivos-page__eyebrow {
+  display: block;
+  margin-bottom: 8px;
+
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+
+  color: #2a6e3f;
+}
+
+.cultivos-page__header h1 {
+  margin: 0 0 8px;
+
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -1px;
+
+  color: #08060d;
+}
+
+.cultivos-page__header p {
+  margin: 0;
+
+  font-size: 16px;
+  color: #6b6375;
+}
+
+.cultivos-page__add {
+  border: none;
+  border-radius: 10px;
+
+  padding: 12px 18px;
+
+  background-color: #4b24ba;
+  color: #ffffff;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.cultivos-page__add:hover {
+  background-color: #3d1d99;
+  transform: translateY(-1px);
+}
+
+.cultivos-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.cultivo-card {
+  display: flex;
+  flex-direction: column;
+
+  min-height: 220px;
+  padding: 24px;
+
+  box-sizing: border-box;
+
+  background-color: #ffffff;
+  border: 1px solid #e5e4e7;
+  border-radius: 16px;
+
+  box-shadow: 0 4px 12px rgba(77, 57, 43, 0.06);
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.cultivo-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(77, 57, 43, 0.1);
+}
+
+.cultivo-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 52px;
+  height: 52px;
+
+  margin-bottom: 20px;
+
+  border-radius: 14px;
+
+  background-color: #fdf7e7;
+
+  font-size: 28px;
+}
+
+.cultivo-card__content {
+  flex: 1;
+}
+
+.cultivo-card__content h2 {
+  margin: 0 0 6px;
+
+  font-size: 22px;
+  font-weight: 700;
+
+  color: #4d392b;
+}
+
+.cultivo-card__content p {
+  margin: 0;
+
+  font-size: 14px;
+  color: #6b6375;
+}
+
+.cultivo-card__link {
+  align-self: flex-start;
+
+  margin-top: 24px;
+  padding: 0;
+
+  border: none;
+  background: transparent;
+
+  color: #4b24ba;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+}
+
+.cultivo-card__link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .cultivos-page__header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .cultivos-page__add {
+    width: 100%;
+  }
+
+  .cultivos-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .cultivos-page__header h1 {
+    font-size: 28px;
+  }
+
+  .cultivo-card {
+    min-height: 200px;
+    padding: 20px;
+  }
+}
