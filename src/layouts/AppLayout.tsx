@@ -5,10 +5,45 @@ import './AppLayout.css'
 
 function AppLayout() {
   const [sidebarHidden, setSidebarHidden] = useState(false)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   return (
     <div className="app-layout">
-      <Sidebar hidden={sidebarHidden} />
+      <header className="app-header">
+        <button
+          type="button"
+          className="app-header__menu"
+          onClick={() => setMobileNavOpen(true)}
+          aria-label="Abrir menu"
+          aria-expanded={mobileNavOpen}
+        >
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path
+              d="M3 5.5h14M3 10h14M3 14.5h14"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+            />
+          </svg>
+        </button>
+
+        <span className="app-header__brand">Fruitvale</span>
+      </header>
+
+      {mobileNavOpen && (
+        <button
+          type="button"
+          className="app-layout__backdrop"
+          aria-label="Fechar menu"
+          onClick={() => setMobileNavOpen(false)}
+        />
+      )}
+
+      <Sidebar
+        hidden={sidebarHidden}
+        mobileOpen={mobileNavOpen}
+        onNavigate={() => setMobileNavOpen(false)}
+      />
 
       <button
         type="button"

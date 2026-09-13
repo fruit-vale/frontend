@@ -261,9 +261,11 @@ const navItems: NavItem[] = [
 
 type SidebarProps = {
   hidden?: boolean
+  mobileOpen?: boolean
+  onNavigate?: () => void
 }
 
-function Sidebar({ hidden = false }: SidebarProps) {
+function Sidebar({ hidden = false, mobileOpen = false, onNavigate }: SidebarProps) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
 
@@ -273,11 +275,20 @@ function Sidebar({ hidden = false }: SidebarProps) {
 
   function handleLogout() {
     logout()
+    onNavigate?.()
     navigate('/login')
   }
 
+  const asideClassName = [
+    'sidebar',
+    hidden ? 'sidebar--hidden' : '',
+    mobileOpen ? 'sidebar--mobile-open' : '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+
   return (
-    <aside className={hidden ? 'sidebar sidebar--hidden' : 'sidebar'}>
+    <aside className={asideClassName}>
       <div className="sidebar__brand">
         <span className="sidebar__brand-name">Fruitvale</span>
         <span className="sidebar__brand-rule" aria-hidden="true" />
@@ -296,6 +307,7 @@ function Sidebar({ hidden = false }: SidebarProps) {
             key={item.to}
             to={item.to}
             end={item.end}
+            onClick={onNavigate}
             className={({ isActive }) =>
               isActive ? 'sidebar__link sidebar__link--active' : 'sidebar__link'
             }
@@ -307,12 +319,12 @@ function Sidebar({ hidden = false }: SidebarProps) {
       </nav>
 
       <div className="sidebar__bottom">
-        <Link className="sidebar__link" to="/perfil">
+        <Link className="sidebar__link" to="/perfil" onClick={onNavigate}>
           <IconPerfil />
           <span>Perfil</span>
         </Link>
         {user?.role === 'administrador' && (
-          <Link className="sidebar__link" to="/configuracoes">
+          <Link className="sidebar__link" to="/configuracoes" onClick={onNavigate}>
             <IconConfiguracoes />
             <span>Configurações</span>
           </Link>
