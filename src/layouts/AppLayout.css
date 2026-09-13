@@ -1,8 +1,61 @@
 .app-layout {
+  position: relative;
+
   display: flex;
   min-height: 100vh;
   width: 100%;
   background-color: #ffffff;
+}
+
+.sidebar-toggle {
+  position: fixed;
+  top: 50%;
+  left: 250px;
+  z-index: 20;
+  transform: translateY(-50%);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+
+  background-color: #ffffff;
+  color: #4b24ba;
+  box-shadow: 0 2px 8px rgba(43, 15, 110, 0.28);
+
+  cursor: pointer;
+
+  transition:
+    left 0.25s ease,
+    box-shadow 0.15s ease;
+}
+
+.sidebar-toggle svg {
+  width: 13px;
+  height: 13px;
+  transition: transform 0.25s ease;
+}
+
+.sidebar-toggle:hover {
+  box-shadow: 0 4px 12px rgba(43, 15, 110, 0.36);
+}
+
+.sidebar-toggle:focus-visible {
+  outline: 2px solid #4b24ba;
+  outline-offset: 2px;
+}
+
+.sidebar-toggle--collapsed {
+  left: 14px;
+}
+
+.sidebar-toggle--collapsed svg {
+  transform: rotate(180deg);
 }
 
 .app-layout__content {
