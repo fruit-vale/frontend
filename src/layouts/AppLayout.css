@@ -7,6 +7,24 @@
   background-color: #ffffff;
 }
 
+.app-header {
+  display: none;
+}
+
+.app-layout__backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+
+  border: none;
+  padding: 0;
+  margin: 0;
+
+  background-color: rgba(10, 4, 26, 0.45);
+  cursor: pointer;
+}
+
 .sidebar-toggle {
   position: fixed;
   top: 50%;
@@ -64,4 +82,74 @@
   padding: 32px;
   box-sizing: border-box;
   overflow-x: hidden;
+}
+
+@media (max-width: 880px) {
+  .app-layout {
+    flex-direction: column;
+  }
+
+  .app-header {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+
+    display: flex;
+    align-items: center;
+    gap: 14px;
+
+    padding: 14px 18px;
+
+    background: linear-gradient(135deg, #4b24ba 0%, #2c1670 100%);
+    box-shadow: 0 4px 16px rgba(29, 12, 74, 0.18);
+  }
+
+  .app-header__menu {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: none;
+    border-radius: 8px;
+
+    background-color: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+
+    cursor: pointer;
+  }
+
+  .app-header__menu svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .app-header__menu:focus-visible {
+    outline: 2px solid #e0a83d;
+    outline-offset: 2px;
+  }
+
+  .app-header__brand {
+    font-family: 'Fraunces', Georgia, serif;
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: #ffffff;
+  }
+
+  .app-layout__backdrop {
+    display: block;
+  }
+
+  .sidebar-toggle {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .app-layout__content {
+    padding: 20px 16px;
+  }
 }

@@ -1,13 +1,17 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import loginImg from '../../assets/login-fruitvale.png'
+import { AuthError } from '../../auth/AuthError'
+import { useAuth } from '../../auth/useAuth'
 import './Login.css'
 
 type View = 'login' | 'recover'
 
 function Login() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const { login } = useAuth()
   const [view, setView] = useState<View>('login')
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
@@ -23,8 +27,19 @@ function Login() {
       return
     }
 
-    setErro('')
-    navigate('/')
+    try {
+      login(email, senha)
+      setErro('')
+      const from =
+        (location.state as { from?: Location })?.from?.pathname ?? '/'
+      navigate(from, { replace: true })
+    } catch (error) {
+      setErro(
+        error instanceof AuthError
+          ? error.message
+          : 'Não foi possível entrar. Tente novamente.',
+      )
+    }
   }
 
   function handleRecoverSubmit(event: FormEvent<HTMLFormElement>) {
@@ -121,6 +136,12 @@ function Login() {
                 Ainda não tem conta?{' '}
                 <a href="#">Fale com o administrador</a>
               </p>
+
+              <ul className="login-form__demo-hint">
+                <li>admin@fruitvale.com · 123456 (Administrador)</li>
+                <li>produtor@fruitvale.com · 123456 (Produtor)</li>
+                <li>analista@fruitvale.com · 123456 (Analista)</li>
+              </ul>
             </form>
           ) : (
             <form
