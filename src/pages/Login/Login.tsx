@@ -132,6 +132,14 @@ function Login() {
                 Entrar
               </button>
 
+              <button
+                type="button"
+                className="login-form__thingspeak"
+                onClick={() => navigate('/thingspeak')}
+              >
+                Visualizar dados no ThingSpeak
+              </button>
+
               <p className="login-form__signup">
                 Ainda não tem conta?{' '}
                 <a href="#">Fale com o administrador</a>

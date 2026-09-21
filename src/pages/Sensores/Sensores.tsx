@@ -1,3 +1,5 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+
 import './Sensores.css'
 
 type Sensor = {
@@ -49,7 +51,86 @@ const sensores: Sensor[] = [
   },
 ]
 
+type DadosFalsos = {
+  umidade: number
+  temperatura: number
+}
+
+function gerarNumero(minimo: number, maximo: number, casasDecimais = 0) {
+  const valor = minimo + Math.random() * (maximo - minimo)
+
+  return Number(valor.toFixed(casasDecimais))
+}
+
+function gerarDadosFalsos(): DadosFalsos {
+  return {
+    umidade: gerarNumero(35, 85),
+    temperatura: gerarNumero(18, 34, 1),
+  }
+}
+
 function Sensores() {
+  const [endpoint, setEndpoint] = useState('https://api.thingspeak.com/update')
+  const [apiKey, setApiKey] = useState('')
+  const [dados, setDados] = useState<DadosFalsos>(() => gerarDadosFalsos())
+  const [intervalo, setIntervalo] = useState('15')
+  const [enviando, setEnviando] = useState(false)
+  const [simulacaoAtiva, setSimulacaoAtiva] = useState(false)
+  const [mensagem, setMensagem] = useState('Nenhum dado enviado ainda.')
+  const gerarEEnviarRef = useRef<() => void>(() => {})
+
+  const enviarDados = useCallback(async (dadosParaEnviar = dados) => {
+    if (!apiKey.trim()) {
+      setMensagem('Informe a Write API Key do canal antes de enviar.')
+      return
+    }
+
+    setEnviando(true)
+
+    try {
+      const parametros = new URLSearchParams({
+        api_key: apiKey.trim(),
+        field1: String(dadosParaEnviar.umidade),
+        field2: String(dadosParaEnviar.temperatura),
+      })
+      const resposta = await fetch(`${endpoint.trim()}?${parametros}`)
+
+      if (!resposta.ok) {
+        throw new Error(`HTTP ${resposta.status}`)
+      }
+
+      const resultado = await resposta.text()
+      setMensagem(`Enviado com sucesso. Entry ID: ${resultado || 'processado'}.`)
+    } catch (erro) {
+      const detalhe = erro instanceof Error ? erro.message : 'erro desconhecido'
+      setMensagem(`Falha no envio: ${detalhe}. Verifique o endpoint e o CORS.`)
+    } finally {
+      setEnviando(false)
+    }
+  }, [apiKey, dados, endpoint])
+
+  const gerarEEnviar = useCallback(() => {
+    const novosDados = gerarDadosFalsos()
+    setDados(novosDados)
+    void enviarDados(novosDados)
+  }, [enviarDados])
+
+  useEffect(() => {
+    gerarEEnviarRef.current = gerarEEnviar
+  }, [gerarEEnviar])
+
+  useEffect(() => {
+    if (!simulacaoAtiva) {
+      return
+    }
+
+    const timer = window.setInterval(() => {
+      gerarEEnviarRef.current()
+    }, Math.max(Number(intervalo) || 15, 15) * 1000)
+
+    return () => window.clearInterval(timer)
+  }, [intervalo, simulacaoAtiva])
+
   return (
     <section className="sensores-page">
       <header className="sensores-page__header">
@@ -97,6 +178,71 @@ function Sensores() {
             <span>Sensores inativos</span>
           </div>
         </article>
+      </section>
+
+      <section className="sensor-simulator">
+        <div className="sensor-simulator__header">
+          <div>
+            <span className="sensor-simulator__eyebrow">AMBIENTE DE TESTE</span>
+            <h2>Enviar dados falsos</h2>
+            <p>Gere uma leitura e envie os valores para um canal ThingSpeak.</p>
+          </div>
+
+          <span className={`sensor-simulator__state ${simulacaoAtiva ? 'sensor-simulator__state--active' : ''}`}>
+            {simulacaoAtiva ? 'Simulação ativa' : 'Simulação parada'}
+          </span>
+        </div>
+
+        <div className="sensor-simulator__fields">
+          <label>
+            Endpoint
+            <input
+              type="url"
+              value={endpoint}
+              onChange={(event) => setEndpoint(event.target.value)}
+              placeholder=""
+            />
+          </label>
+
+          <label>
+            Write API Key
+            <input
+              type="password"
+              value={apiKey}
+              onChange={(event) => setApiKey(event.target.value)}
+              placeholder="Cole a chave do canal"
+            />
+          </label>
+
+          <label>
+            Intervalo (segundos)
+            <input
+              type="number"
+              min="15"
+              value={intervalo}
+              onChange={(event) => setIntervalo(event.target.value)}
+            />
+          </label>
+        </div>
+
+        <div className="sensor-simulator__readings">
+          <span>Umidade <strong>{dados.umidade}%</strong></span>
+          <span>Temperatura <strong>{dados.temperatura} °C</strong></span>
+        </div>
+
+        <div className="sensor-simulator__actions">
+          <button type="button" onClick={gerarEEnviar} disabled={enviando}>
+            {enviando ? 'Enviando...' : 'Gerar e enviar agora'}
+          </button>
+          <button
+            type="button"
+            className="sensor-simulator__secondary"
+            onClick={() => setSimulacaoAtiva((ativa) => !ativa)}
+          >
+            {simulacaoAtiva ? 'Parar simulação' : 'Iniciar simulação'}
+          </button>
+          <span className="sensor-simulator__message" role="status">{mensagem}</span>
+        </div>
       </section>
 
       <section className="sensores-list">

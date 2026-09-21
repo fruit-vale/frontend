@@ -12,6 +12,7 @@ import Usuarios from './pages/Usuarios/Usuarios'
 import Configuracoes from './pages/Configuracoes/Configuracoes'
 import Mercado from './pages/Mercado/Mercado'
 import Perfil from './pages/Perfil/Perfil'
+import ThingSpeak from './pages/ThingSpeak/ThingSpeak'
 import ProtectedRoute from './routes/ProtectedRoute'
 import RoleRoute from './routes/RoleRoute'
 
@@ -19,6 +20,7 @@ function App() {
   return (
     <Routes>
       <Route path="login" element={<Login />} />
+      <Route path="thingspeak" element={<ThingSpeak />} />
 
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
