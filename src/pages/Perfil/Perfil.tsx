@@ -24,6 +24,7 @@ function Perfil() {
         <div className="perfil-card__info">
           <h2>{user.nome}</h2>
           <p>{user.email}</p>
+          <p>{user.empresa?.razao_social ?? 'Plataforma FruitVale'}</p>
 
           <span className={`perfil-card__badge perfil-card__badge--${user.role}`}>
             {ROLE_LABELS[user.role]}

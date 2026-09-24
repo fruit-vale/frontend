@@ -1,54 +1,5 @@
 import './Sensores.css'
 
-type Sensor = {
-  nome: string
-  tipo: string
-  plantacao: string
-  lote: string
-  ultimaLeitura: string
-  status: 'Ativo' | 'Inativo'
-  icone: string
-}
-
-const sensores: Sensor[] = [
-  {
-    nome: 'Sensor de Umidade 01',
-    tipo: 'Umidade do solo',
-    plantacao: 'Fazenda Uva Norte',
-    lote: 'UV-001',
-    ultimaLeitura: 'Há 5 minutos',
-    status: 'Ativo',
-    icone: '💧',
-  },
-  {
-    nome: 'Sensor de Temperatura 01',
-    tipo: 'Temperatura',
-    plantacao: 'Fazenda Uva Norte',
-    lote: 'UV-001',
-    ultimaLeitura: 'Há 8 minutos',
-    status: 'Ativo',
-    icone: '🌡️',
-  },
-  {
-    nome: 'Sensor de Umidade 02',
-    tipo: 'Umidade do solo',
-    plantacao: 'Fazenda Manga Norte',
-    lote: 'MG-001',
-    ultimaLeitura: 'Há 12 minutos',
-    status: 'Ativo',
-    icone: '💧',
-  },
-  {
-    nome: 'Sensor de Luminosidade 01',
-    tipo: 'Luminosidade',
-    plantacao: 'Fazenda Manga Sul',
-    lote: 'MG-002',
-    ultimaLeitura: 'Há 25 minutos',
-    status: 'Inativo',
-    icone: '☀️',
-  },
-]
-
 function Sensores() {
   return (
     <section className="sensores-page">
@@ -75,7 +26,7 @@ function Sensores() {
           <span className="sensor-summary-card__icon">📡</span>
 
           <div>
-            <strong>18</strong>
+            <strong>—</strong>
             <span>Total de sensores</span>
           </div>
         </article>
@@ -84,7 +35,7 @@ function Sensores() {
           <span className="sensor-summary-card__icon">🟢</span>
 
           <div>
-            <strong>16</strong>
+            <strong>—</strong>
             <span>Sensores ativos</span>
           </div>
         </article>
@@ -93,7 +44,7 @@ function Sensores() {
           <span className="sensor-summary-card__icon">🔴</span>
 
           <div>
-            <strong>2</strong>
+            <strong>—</strong>
             <span>Sensores inativos</span>
           </div>
         </article>
@@ -116,62 +67,10 @@ function Sensores() {
           </select>
         </div>
 
-        <div className="sensores-table">
-          <div className="sensores-table__head">
-            <span>Sensor</span>
-            <span>Tipo</span>
-            <span>Plantação</span>
-            <span>Última leitura</span>
-            <span>Status</span>
-            <span></span>
-          </div>
-
-          {sensores.map((sensor) => (
-            <article
-              className="sensor-row"
-              key={sensor.nome}
-            >
-              <div className="sensor-row__name">
-                <span className="sensor-row__icon">
-                  {sensor.icone}
-                </span>
-
-                <div>
-                  <strong>{sensor.nome}</strong>
-                  <span>{sensor.lote}</span>
-                </div>
-              </div>
-
-              <span className="sensor-row__type">
-                {sensor.tipo}
-              </span>
-
-              <span className="sensor-row__plantacao">
-                {sensor.plantacao}
-              </span>
-
-              <span className="sensor-row__reading">
-                {sensor.ultimaLeitura}
-              </span>
-
-              <span
-                className={`sensor-status sensor-status--${sensor.status.toLowerCase()}`}
-              >
-                ● {sensor.status}
-              </span>
-
-              <button
-                type="button"
-                className="sensor-row__details"
-              >
-                Ver →
-              </button>
-            </article>
-          ))}
-        </div>
+        <p className="empty-state">Nenhum sensor cadastrado ainda.</p>
       </section>
     </section>
   )
 }
 
-export default Sensores
+export default Sensores

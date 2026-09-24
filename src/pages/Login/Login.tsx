@@ -15,11 +15,13 @@ function Login() {
   const [view, setView] = useState<View>('login')
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
+  const [lembrar, setLembrar] = useState(true)
+  const [enviando, setEnviando] = useState(false)
   const [recoverEmail, setRecoverEmail] = useState('')
   const [recoverEnviado, setRecoverEnviado] = useState(false)
   const [erro, setErro] = useState('')
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     if (!email || !senha) {
@@ -27,8 +29,10 @@ function Login() {
       return
     }
 
+    setEnviando(true)
+
     try {
-      login(email, senha)
+      await login(email, senha, lembrar)
       setErro('')
       const from =
         (location.state as { from?: Location })?.from?.pathname ?? '/'
@@ -39,6 +43,8 @@ function Login() {
           ? error.message
           : 'Não foi possível entrar. Tente novamente.',
       )
+    } finally {
+      setEnviando(false)
     }
   }
 
@@ -86,7 +92,7 @@ function Login() {
                 <input
                   type="email"
                   name="email"
-                  placeholder="voce@fruitvale.com"
+                  placeholder="voce@fruitvale.com.br"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   autoComplete="username"
@@ -113,7 +119,11 @@ function Login() {
 
               <div className="login-form__row">
                 <label className="login-form__remember">
-                  <input type="checkbox" />
+                  <input
+                    type="checkbox"
+                    checked={lembrar}
+                    onChange={(event) => setLembrar(event.target.checked)}
+                  />
                   <span>Lembrar de mim</span>
                 </label>
                 <button
@@ -128,20 +138,18 @@ function Login() {
                 </button>
               </div>
 
-              <button type="submit" className="login-form__submit">
-                Entrar
+              <button
+                type="submit"
+                className="login-form__submit"
+                disabled={enviando}
+              >
+                {enviando ? 'Entrando...' : 'Entrar'}
               </button>
 
               <p className="login-form__signup">
                 Ainda não tem conta?{' '}
                 <a href="#">Fale com o administrador</a>
               </p>
-
-              <ul className="login-form__demo-hint">
-                <li>admin@fruitvale.com · 123456 (Administrador)</li>
-                <li>produtor@fruitvale.com · 123456 (Produtor)</li>
-                <li>analista@fruitvale.com · 123456 (Analista)</li>
-              </ul>
             </form>
           ) : (
             <form
@@ -179,7 +187,7 @@ function Login() {
                     <input
                       type="email"
                       name="recover-email"
-                      placeholder="voce@fruitvale.com"
+                      placeholder="voce@fruitvale.com.br"
                       value={recoverEmail}
                       onChange={(event) =>
                         setRecoverEmail(event.target.value)

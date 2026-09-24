@@ -1,0 +1,83 @@
+.modal {
+  width: min(640px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  padding: 0;
+
+  border: none;
+  border-radius: 16px;
+
+  background-color: #ffffff;
+  color: #4d392b;
+
+  box-shadow: 0 24px 60px rgba(8, 6, 13, 0.25);
+}
+
+.modal::backdrop {
+  background-color: rgba(8, 6, 13, 0.45);
+}
+
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  padding: 20px 24px;
+  border-bottom: 1px solid #eeeeef;
+}
+
+.modal__header h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #08060d;
+}
+
+.modal__fechar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 34px;
+  height: 34px;
+  padding: 0;
+
+  border: none;
+  border-radius: 8px;
+  background: none;
+
+  color: #6b6375;
+  cursor: pointer;
+}
+
+.modal__fechar:hover {
+  background-color: #f3f1f6;
+}
+
+.modal__fechar svg {
+  width: 18px;
+  height: 18px;
+}
+
+.modal__body {
+  padding: 20px 24px 24px;
+}
+
+/* dentro do modal o formulário não precisa do visual de cartão */
+.modal .form-card {
+  margin: 0;
+  padding: 0;
+  border: none;
+  box-shadow: none;
+}
+
+@media (max-width: 600px) {
+  .modal {
+    max-height: calc(100vh - 24px);
+  }
+
+  .modal__header,
+  .modal__body {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
