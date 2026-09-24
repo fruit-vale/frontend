@@ -1,63 +1,73 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { mockUsers } from './mockUsers'
+import {
+  ApiError,
+  apiFetch,
+  getToken,
+  setToken,
+  setUnauthorizedHandler,
+} from '../lib/api'
 import { AuthError } from './AuthError'
 import { AuthContext } from './authContextInstance'
 import type { AuthContextValue, AuthUser } from './authContextInstance'
 
 export type { AuthUser } from './authContextInstance'
 
-const STORAGE_KEY = 'fruitvale:auth-user'
-
-function readStoredUser(): AuthUser | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as AuthUser) : null
-  } catch {
-    return null
-  }
+type LoginResponse = {
+  access_token: string
+  usuario: AuthUser
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(() => readStoredUser())
+  const [user, setUser] = useState<AuthUser | null>(null)
+  const [carregando, setCarregando] = useState(() => getToken() !== null)
 
   useEffect(() => {
-    if (user) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(user))
-    } else {
-      localStorage.removeItem(STORAGE_KEY)
+    setUnauthorizedHandler(() => {
+      setToken(null)
+      setUser(null)
+    })
+
+    // Revalida o token salvo e recarrega os dados do usuário
+    if (getToken()) {
+      apiFetch<AuthUser>('/auth/me')
+        .then(setUser)
+        .catch(() => setToken(null))
+        .finally(() => setCarregando(false))
     }
-  }, [user])
+
+    return () => setUnauthorizedHandler(undefined)
+  }, [])
 
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
-      login(email, senha) {
-        const found = mockUsers.find(
-          (candidate) =>
-            candidate.email.toLowerCase() === email.trim().toLowerCase() &&
-            candidate.senha === senha,
-        )
-
-        if (!found) {
-          throw new AuthError('E-mail ou senha inválidos.')
+      carregando,
+      async login(email, senha, lembrar) {
+        try {
+          const { access_token, usuario } = await apiFetch<LoginResponse>(
+            '/auth/login',
+            {
+              method: 'POST',
+              body: JSON.stringify({ email: email.trim(), senha }),
+            },
+          )
+          setToken(access_token, lembrar)
+          setUser(usuario)
+          return usuario
+        } catch (error) {
+          if (error instanceof ApiError && error.status === 401) {
+            throw new AuthError('E-mail ou senha inválidos.')
+          }
+          throw error
         }
-
-        const authUser: AuthUser = {
-          id: found.id,
-          nome: found.nome,
-          email: found.email,
-          role: found.role,
-        }
-
-        setUser(authUser)
-        return authUser
       },
       logout() {
+        setToken(null)
         setUser(null)
       },
     }),
-    [user],
+    [user, carregando],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

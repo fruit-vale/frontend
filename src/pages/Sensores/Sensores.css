@@ -121,136 +121,6 @@
   color: #6b6375;
 }
 
-/* SIMULADOR */
-
-.sensor-simulator {
-  margin-bottom: 36px;
-  padding: 24px;
-  background: #fffdf5;
-  border: 1px solid #eadfbe;
-  border-radius: 14px;
-}
-
-.sensor-simulator__header,
-.sensor-simulator__actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.sensor-simulator__eyebrow {
-  display: block;
-  margin-bottom: 6px;
-  color: #9b6816;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1.2px;
-}
-
-.sensor-simulator h2 {
-  margin: 0 0 4px;
-  color: #4d392b;
-  font-size: 20px;
-}
-
-.sensor-simulator p {
-  margin: 0;
-  color: #6b6375;
-  font-size: 13px;
-}
-
-.sensor-simulator__state {
-  padding: 6px 10px;
-  border-radius: 20px;
-  background: #f1eeee;
-  color: #8a8490;
-  font-size: 11px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.sensor-simulator__state--active {
-  background: #e8f5ec;
-  color: #2a6e3f;
-}
-
-.sensor-simulator__fields {
-  display: grid;
-  grid-template-columns: 2fr 1.5fr 150px;
-  gap: 14px;
-  margin: 22px 0 16px;
-}
-
-.sensor-simulator label {
-  display: grid;
-  gap: 6px;
-  color: #4d392b;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.sensor-simulator input {
-  width: 100%;
-  padding: 10px 11px;
-  border: 1px solid #e0d8c1;
-  border-radius: 8px;
-  background: #ffffff;
-  color: #4d392b;
-  font-size: 13px;
-}
-
-.sensor-simulator__readings {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  margin-bottom: 20px;
-}
-
-.sensor-simulator__readings span {
-  padding: 12px;
-  border-radius: 8px;
-  background: #ffffff;
-  color: #6b6375;
-  font-size: 12px;
-}
-
-.sensor-simulator__readings strong {
-  display: block;
-  margin-top: 4px;
-  color: #4d392b;
-  font-size: 16px;
-}
-
-.sensor-simulator button {
-  padding: 10px 14px;
-  border: none;
-  border-radius: 8px;
-  background: #4b24ba;
-  color: #ffffff;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.sensor-simulator button:disabled {
-  cursor: wait;
-  opacity: 0.65;
-}
-
-.sensor-simulator__secondary {
-  background: transparent !important;
-  border: 1px solid #4b24ba !important;
-  color: #4b24ba !important;
-}
-
-.sensor-simulator__message {
-  margin-left: auto;
-  color: #6b6375;
-  font-size: 12px;
-  text-align: right;
-}
-
 /* CABEÇALHO DA LISTA */
 
 .sensores-list__header {
@@ -476,11 +346,6 @@
   .sensores-page__add {
     width: 100%;
   }
-
-  .sensor-simulator__fields,
-  .sensor-simulator__readings {
-    grid-template-columns: repeat(2, 1fr);
-  }
 }
 
 @media (max-width: 600px) {
@@ -497,24 +362,4 @@
   .sensores-page__header h1 {
     font-size: 28px;
   }
-
-  .sensor-simulator {
-    padding: 18px;
-  }
-
-  .sensor-simulator__header,
-  .sensor-simulator__actions {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .sensor-simulator__fields,
-  .sensor-simulator__readings {
-    grid-template-columns: 1fr;
-  }
-
-  .sensor-simulator__message {
-    margin-left: 0;
-    text-align: left;
-  }
-}
+}

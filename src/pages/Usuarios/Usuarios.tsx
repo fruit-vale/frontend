@@ -1,26 +1,46 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ROLE_LABELS, type Role } from '../../auth/roles'
-import { mockUsers } from '../../auth/mockUsers'
+import { apiFetch } from '../../lib/api'
 import './Usuarios.css'
 
 type Usuario = {
-  id: string
+  id: number
   nome: string
   email: string
-  role: Role
+  role: Role | null
 }
 
 const roleOptions: Role[] = ['administrador', 'produtor', 'analista']
 
 function Usuarios() {
-  const [usuarios, setUsuarios] = useState<Usuario[]>(
-    mockUsers.map(({ id, nome, email, role }) => ({ id, nome, email, role })),
-  )
+  const [usuarios, setUsuarios] = useState<Usuario[]>([])
+  const [carregando, setCarregando] = useState(true)
+  const [erro, setErro] = useState('')
 
-  function handleRoleChange(id: string, role: Role) {
-    setUsuarios((prev) =>
-      prev.map((usuario) => (usuario.id === id ? { ...usuario, role } : usuario)),
-    )
+  useEffect(() => {
+    apiFetch<Usuario[]>('/usuarios')
+      .then(setUsuarios)
+      .catch((error: Error) =>
+        setErro(`Não foi possível carregar os usuários: ${error.message}`),
+      )
+      .finally(() => setCarregando(false))
+  }, [])
+
+  async function handleRoleChange(id: number, role: Role) {
+    try {
+      const atualizado = await apiFetch<Usuario>(`/usuarios/${id}/perfil`, {
+        method: 'PATCH',
+        body: JSON.stringify({ role }),
+      })
+      setErro('')
+      setUsuarios((prev) =>
+        prev.map((usuario) => (usuario.id === id ? atualizado : usuario)),
+      )
+    } catch (error) {
+      setErro(
+        `Não foi possível alterar o perfil: ${error instanceof Error ? error.message : 'erro desconhecido'}`,
+      )
+    }
   }
 
   return (
@@ -43,6 +63,16 @@ function Usuarios() {
       </header>
 
       <section className="usuarios-list">
+        {erro && (
+          <p className="empty-state" role="alert">
+            {erro}
+          </p>
+        )}
+
+        {!carregando && !erro && usuarios.length === 0 && (
+          <p className="empty-state">Nenhum usuário cadastrado.</p>
+        )}
+
         <div className="usuarios-table">
           <div className="usuarios-table__head">
             <span>Usuário</span>
@@ -62,13 +92,18 @@ function Usuarios() {
               <span className="usuario-row__email">{usuario.email}</span>
 
               <select
-                className={`usuario-row__role usuario-row__role--${usuario.role}`}
-                value={usuario.role}
+                className={`usuario-row__role usuario-row__role--${usuario.role ?? 'sem-perfil'}`}
+                value={usuario.role ?? ''}
                 onChange={(event) =>
                   handleRoleChange(usuario.id, event.target.value as Role)
                 }
                 aria-label={`Perfil de ${usuario.nome}`}
               >
+                {!usuario.role && (
+                  <option value="" disabled>
+                    Sem perfil
+                  </option>
+                )}
                 {roleOptions.map((role) => (
                   <option key={role} value={role}>
                     {ROLE_LABELS[role]}
