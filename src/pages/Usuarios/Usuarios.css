@@ -79,7 +79,7 @@
 .usuarios-table__head,
 .usuario-row {
   display: grid;
-  grid-template-columns: minmax(180px, 1.3fr) minmax(200px, 1.5fr) 180px;
+  grid-template-columns: minmax(180px, 1.3fr) minmax(200px, 1.5fr) minmax(140px, 1fr) 130px 70px;
 
   align-items: center;
   gap: 16px;
@@ -159,10 +159,28 @@
   border: 1px solid #e5e4e7;
   border-radius: 20px;
 
+  justify-self: start;
+
   font-size: 12px;
   font-weight: 600;
+}
+
+.usuario-row__edit {
+  justify-self: end;
+
+  border: none;
+  background: none;
+  padding: 6px 0;
+
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b24ba;
 
   cursor: pointer;
+}
+
+.usuario-row__edit:hover {
+  text-decoration: underline;
 }
 
 .usuario-row__role--administrador {
@@ -187,7 +205,7 @@
 
   .usuarios-table__head,
   .usuario-row {
-    min-width: 560px;
+    min-width: 760px;
   }
 
   .usuarios-page__header {

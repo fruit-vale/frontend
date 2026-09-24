@@ -4,11 +4,11 @@ import Home from './pages/Home'
 import NotFound from './pages/NotFound'
 import Login from './pages/Login/Login'
 import Cultivos from './pages/Cultivos/Cultivos'
-import Plantacoes from './pages/Plantacoes/Plantacoes'
 import Sensores from './pages/Sensores/Sensores'
 import LeiturasAlertas from './pages/LeiturasAlertas/LeiturasAlertas'
 import Previsao from './pages/Previsao/Previsao'
 import Usuarios from './pages/Usuarios/Usuarios'
+import Empresas from './pages/Empresas/Empresas'
 import Configuracoes from './pages/Configuracoes/Configuracoes'
 import Mercado from './pages/Mercado/Mercado'
 import Perfil from './pages/Perfil/Perfil'
@@ -29,7 +29,6 @@ function App() {
             element={<RoleRoute allowed={['administrador', 'produtor']} />}
           >
             <Route path="cultivos" element={<Cultivos />} />
-            <Route path="plantacoes" element={<Plantacoes />} />
             <Route path="sensores" element={<Sensores />} />
           </Route>
 
@@ -48,6 +47,7 @@ function App() {
 
           <Route element={<RoleRoute allowed={['administrador']} />}>
             <Route path="usuarios" element={<Usuarios />} />
+            <Route path="empresas" element={<Empresas />} />
             <Route path="configuracoes" element={<Configuracoes />} />
           </Route>
         </Route>

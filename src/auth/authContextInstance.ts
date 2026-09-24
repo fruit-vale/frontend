@@ -1,11 +1,17 @@
 import { createContext } from 'react'
 import type { Role } from './roles'
 
+export type Empresa = {
+  id: number
+  razao_social: string
+}
+
 export type AuthUser = {
   id: number
   nome: string
   email: string
   role: Role
+  empresa: Empresa | null
 }
 
 export type AuthContextValue = {

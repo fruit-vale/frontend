@@ -45,23 +45,6 @@ function IconCultivos() {
   )
 }
 
-function IconPlantacoes() {
-  return (
-    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
-      <rect
-        x="3"
-        y="3.5"
-        width="14"
-        height="13"
-        rx="1.5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-      />
-      <path d="M3 8.5h14M9.5 3.5V17" stroke="currentColor" strokeWidth="1.5" />
-    </svg>
-  )
-}
-
 function IconSensores() {
   return (
     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -164,6 +147,26 @@ function IconUsuarios() {
   )
 }
 
+function IconEmpresas() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path
+        d="M3.5 17V5.5a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1V17M11.5 9h4a1 1 0 0 1 1 1v7M2.5 17h15"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M6.3 7.5h1.4M6.3 10.5h1.4M6.3 13.5h1.4M13.5 12h.5M13.5 14.5h.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
 function IconMercado() {
   return (
     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -222,12 +225,6 @@ const navItems: NavItem[] = [
     roles: ['administrador', 'produtor'],
   },
   {
-    to: '/plantacoes',
-    label: 'Plantações',
-    icon: <IconPlantacoes />,
-    roles: ['administrador', 'produtor'],
-  },
-  {
     to: '/sensores',
     label: 'Sensores',
     icon: <IconSensores />,
@@ -250,6 +247,12 @@ const navItems: NavItem[] = [
     label: 'Mercado e Exportação',
     icon: <IconMercado />,
     roles: ['administrador', 'analista'],
+  },
+  {
+    to: '/empresas',
+    label: 'Empresas',
+    icon: <IconEmpresas />,
+    roles: ['administrador'],
   },
   {
     to: '/usuarios',
