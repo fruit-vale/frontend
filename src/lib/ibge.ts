@@ -42,3 +42,28 @@ export function listarMunicipios(uf: string) {
   }
   return lista
 }
+
+// Contornos (malhas) de estados e municípios, para enquadrar o mapa.
+// qualidade=minima: poucos KB, suficiente para zoom e contorno.
+const MALHAS_URL = 'https://servicodados.ibge.gov.br/api/v3/malhas'
+const malhas = new Map<string, Promise<GeoJSON.GeoJsonObject>>()
+
+function malha(caminho: string) {
+  let contorno = malhas.get(caminho)
+  if (!contorno) {
+    contorno = emCache(
+      fetch(
+        `${MALHAS_URL}/${caminho}?formato=application/vnd.geo%2Bjson&qualidade=minima`,
+      ).then((resposta) => {
+        if (!resposta.ok) throw new Error(`IBGE respondeu HTTP ${resposta.status}`)
+        return resposta.json() as Promise<GeoJSON.GeoJsonObject>
+      }),
+      () => malhas.delete(caminho),
+    )
+    malhas.set(caminho, contorno)
+  }
+  return contorno
+}
+
+export const malhaEstado = (uf: string) => malha(`estados/${uf}`)
+export const malhaMunicipio = (id: number) => malha(`municipios/${id}`)

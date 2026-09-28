@@ -7,10 +7,12 @@ type ModalProps = {
   titulo: string
   onFechar: () => void
   children: ReactNode
+  /** Mais largo, para conteúdo como mapas. */
+  largo?: boolean
 }
 
 // Usa <dialog> nativo: foco preso no modal, Esc para fechar e fundo escurecido
-function Modal({ aberto, titulo, onFechar, children }: ModalProps) {
+function Modal({ aberto, titulo, onFechar, children, largo }: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
@@ -24,7 +26,7 @@ function Modal({ aberto, titulo, onFechar, children }: ModalProps) {
   return (
     <dialog
       ref={ref}
-      className="modal"
+      className={largo ? 'modal modal--largo' : 'modal'}
       aria-labelledby="modal-titulo"
       onCancel={(event) => {
         event.preventDefault()

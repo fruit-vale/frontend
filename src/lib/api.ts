@@ -59,5 +59,7 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}) {
     throw new ApiError(resposta.status, mensagem)
   }
 
+  // 204 No Content (ex.: bloquear/excluir dispositivo) não tem corpo
+  if (resposta.status === 204) return undefined as T
   return (await resposta.json()) as T
 }

@@ -177,12 +177,8 @@
 .sensor-row {
   display: grid;
   grid-template-columns:
-    minmax(190px, 1.5fr)
-    minmax(130px, 1fr)
-    minmax(150px, 1.2fr)
-    minmax(120px, 1fr)
-    90px
-    60px;
+    minmax(200px, 1.5fr) minmax(130px, 1fr) 110px
+    minmax(250px, auto);
 
   align-items: center;
   gap: 16px;
@@ -217,6 +213,14 @@
 
 .sensor-row:hover {
   background-color: #faf9fc;
+}
+
+/* com a coluna Empresa (visão do administrador) */
+.sensores-table__head.sensores-table--admin,
+.sensor-row.sensores-table--admin {
+  grid-template-columns:
+    minmax(200px, 1.5fr) minmax(130px, 1fr) minmax(130px, 1fr) 110px
+    minmax(250px, auto);
 }
 
 /* NOME DO SENSOR */
@@ -266,14 +270,128 @@
 
 /* DEMAIS INFORMAÇÕES */
 
-.sensor-row__type,
-.sensor-row__plantacao,
-.sensor-row__reading {
+/* DADOS QUE O SENSOR ENVIA */
+
+.sensor-row__name div .sensor-row__medidas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 3px;
+  font-size: 11px;
+  color: #8a8490;
+}
+
+.sensor-row__medidas em {
+  padding: 1px 7px;
+
+  border-radius: 10px;
+  background-color: #fdf7e7;
+
+  font-style: normal;
+  color: #6b5a2e;
+}
+
+.sensor-medidas {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  margin: 0;
+  padding: 16px;
+
+  border: 1px solid #e5e4e7;
+  border-radius: 12px;
+}
+
+.sensor-medidas legend {
+  padding: 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #4d392b;
+}
+
+.sensor-medidas > .form-hint {
+  margin: 0;
+}
+
+.editor-medidas {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.editor-medidas__linha {
+  display: grid;
+  grid-template-columns: minmax(160px, 1.4fr) minmax(130px, 1fr) 90px minmax(140px, 1fr) 32px;
+  align-items: end;
+  gap: 10px;
+}
+
+.editor-medidas__remover {
+  height: 40px;
+
+  border: 1px solid #e5e4e7;
+  border-radius: 9px;
+  background-color: #ffffff;
+
+  font-size: 18px;
+  color: #a12a2a;
+
+  cursor: pointer;
+}
+
+.editor-medidas__acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.editor-medidas__acoes button {
+  padding: 4px 0;
+
+  border: none;
+  background: none;
+
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b24ba;
+
+  cursor: pointer;
+}
+
+.editor-medidas__acoes button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.credenciais__medidas {
+  margin: 0;
+  padding-left: 18px;
+
+  font-size: 13px;
+  color: #4d392b;
+}
+
+.sensor-row__lote {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+
   font-size: 12px;
-  color: #6b6375;
+}
+
+.sensor-row__lote strong {
+  font-weight: 600;
+  color: #4d392b;
+}
+
+.sensor-row__lote span {
+  color: #8a8490;
 }
 
 .sensor-row__plantacao {
+  font-size: 12px;
   color: #4d392b;
 }
 
@@ -300,10 +418,49 @@
   color: #9b4b4b;
 }
 
-/* BOTÃO */
+.sensor-status--manutencao {
+  background-color: #fdf1e4;
+  color: #b9822a;
+}
 
-.sensor-row__details {
-  padding: 0;
+/* ACESSO MQTT */
+
+.sensor-row__name div .sensor-row__acesso {
+  width: fit-content;
+  margin-top: 2px;
+  padding: 2px 7px;
+
+  border-radius: 10px;
+
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.sensor-row__name div .sensor-row__acesso--ativo {
+  background-color: #eee9fb;
+  color: #4b24ba;
+}
+
+.sensor-row__name div .sensor-row__acesso--inativo {
+  background-color: #f5eeee;
+  color: #9b4b4b;
+}
+
+.sensor-row__name div .sensor-row__acesso--sem_acesso {
+  background-color: #fdf1e4;
+  color: #8a5a14;
+}
+
+/* AÇÕES */
+
+.sensor-row__acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+}
+
+.sensor-row__acoes button {
+  padding: 6px 0;
 
   border: none;
   background: transparent;
@@ -316,8 +473,92 @@
   cursor: pointer;
 }
 
-.sensor-row__details:hover {
+.sensor-row__acoes button:hover:not(:disabled) {
   text-decoration: underline;
+}
+
+.sensor-row__acoes button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+.sensor-row__acoes .sensor-row__excluir {
+  color: #a12a2a;
+}
+
+/* FILTROS E ERROS DA LISTA */
+
+.sensores-list__filtros {
+  display: flex;
+  gap: 10px;
+}
+
+.sensores-list__erro {
+  margin-bottom: 16px;
+}
+
+/* CREDENCIAIS (exibidas uma única vez) */
+
+.credenciais {
+  gap: 10px;
+  margin-bottom: 0;
+}
+
+.credenciais__aviso {
+  margin: 0 0 6px;
+  padding: 12px 14px;
+
+  border-radius: 9px;
+  background-color: #fdf1e4;
+
+  font-size: 13px;
+  line-height: 1.45;
+  color: #8a5a14;
+}
+
+.credencial {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.credencial__rotulo {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #6b6375;
+}
+
+.credencial__valor {
+  padding: 8px 10px;
+
+  border: 1px solid #e5e4e7;
+  border-radius: 8px;
+  background-color: #faf9fc;
+
+  font-size: 13px;
+  color: #4d392b;
+  overflow-wrap: anywhere;
+}
+
+.credencial__copiar {
+  min-width: 76px;
+  padding: 7px 10px;
+
+  border: 1px solid #e5e4e7;
+  border-radius: 8px;
+  background-color: #ffffff;
+
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #4b24ba;
+
+  cursor: pointer;
+}
+
+.credencial__copiar:hover {
+  background-color: #faf9fc;
 }
 
 /* RESPONSIVO */
@@ -329,7 +570,12 @@
 
   .sensores-table__head,
   .sensor-row {
-    min-width: 850px;
+    min-width: 760px;
+  }
+
+  .sensores-table__head.sensores-table--admin,
+  .sensor-row.sensores-table--admin {
+    min-width: 900px;
   }
 }
 
@@ -355,8 +601,27 @@
     gap: 14px;
   }
 
+  .sensores-list__filtros {
+    flex-direction: column;
+  }
+
   .sensores-list__header select {
     width: 100%;
+  }
+
+  .credencial {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  /* cada dado vira um bloco: nome e tipo, unidade e chave, remover */
+  .editor-medidas__linha {
+    grid-template-columns: 1fr 1fr 40px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed #e5e4e7;
+  }
+
+  .credencial__rotulo {
+    grid-column: 1 / -1;
   }
 
   .sensores-page__header h1 {

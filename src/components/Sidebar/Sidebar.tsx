@@ -126,6 +126,36 @@ function IconConfiguracoes() {
   )
 }
 
+function IconPropriedades() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path
+        d="M2.5 16.5h15M4 16.5V9l4-3 4 3v7.5M12 11h4.5v5.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M7 16.5v-3.5h2v3.5" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function IconCulturas() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path
+        d="M10 17V9M10 9c0-3 2-5.5 5.5-5.5 0 3.5-2.5 5.5-5.5 5.5ZM10 12c0-2.5-1.7-4.5-4.8-4.5 0 3 2 4.5 4.8 4.5Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M6 17h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 function IconUsuarios() {
   return (
     <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -225,6 +255,12 @@ const navItems: NavItem[] = [
     roles: ['administrador', 'produtor'],
   },
   {
+    to: '/culturas',
+    label: 'Culturas',
+    icon: <IconCulturas />,
+    roles: ['administrador', 'produtor'],
+  },
+  {
     to: '/sensores',
     label: 'Sensores',
     icon: <IconSensores />,
@@ -252,6 +288,12 @@ const navItems: NavItem[] = [
     to: '/empresas',
     label: 'Empresas',
     icon: <IconEmpresas />,
+    roles: ['administrador'],
+  },
+  {
+    to: '/propriedades',
+    label: 'Propriedades',
+    icon: <IconPropriedades />,
     roles: ['administrador'],
   },
   {

@@ -9,6 +9,8 @@ import LeiturasAlertas from './pages/LeiturasAlertas/LeiturasAlertas'
 import Previsao from './pages/Previsao/Previsao'
 import Usuarios from './pages/Usuarios/Usuarios'
 import Empresas from './pages/Empresas/Empresas'
+import Culturas from './pages/Culturas/Culturas'
+import Propriedades from './pages/Propriedades/Propriedades'
 import Configuracoes from './pages/Configuracoes/Configuracoes'
 import Mercado from './pages/Mercado/Mercado'
 import Perfil from './pages/Perfil/Perfil'
@@ -30,6 +32,7 @@ function App() {
           >
             <Route path="cultivos" element={<Cultivos />} />
             <Route path="sensores" element={<Sensores />} />
+            <Route path="culturas" element={<Culturas />} />
           </Route>
 
           <Route
@@ -48,6 +51,7 @@ function App() {
           <Route element={<RoleRoute allowed={['administrador']} />}>
             <Route path="usuarios" element={<Usuarios />} />
             <Route path="empresas" element={<Empresas />} />
+            <Route path="propriedades" element={<Propriedades />} />
             <Route path="configuracoes" element={<Configuracoes />} />
           </Route>
         </Route>

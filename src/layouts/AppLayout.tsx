@@ -1,9 +1,11 @@
 import { useState } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
+import ErroPagina from '../components/ErroPagina/ErroPagina'
 import Sidebar from '../components/Sidebar/Sidebar'
 import './AppLayout.css'
 
 function AppLayout() {
+  const location = useLocation()
   const [sidebarHidden, setSidebarHidden] = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
@@ -68,7 +70,9 @@ function AppLayout() {
       </button>
 
       <main className="app-layout__content">
-        <Outlet />
+        <ErroPagina key={location.pathname}>
+          <Outlet />
+        </ErroPagina>
       </main>
     </div>
   )
