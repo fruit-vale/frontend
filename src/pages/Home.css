@@ -1,0 +1,336 @@
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.dashboard__eyebrow {
+  display: block;
+  margin-bottom: 8px;
+
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+
+  color: #2a6e3f;
+}
+
+.dashboard__header h1 {
+  margin: 0 0 8px;
+
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: -1px;
+
+  color: #08060d;
+}
+
+.dashboard__header p {
+  margin: 0;
+  font-size: 16px;
+  color: #6b6375;
+}
+
+/* NÚMEROS DO RESUMO */
+
+.dashboard__resumo {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.dashboard-numero {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  padding: 18px 20px;
+
+  background-color: #ffffff;
+  border: 1px solid #e5e4e7;
+  border-radius: 14px;
+  box-shadow: 0 4px 12px rgba(77, 57, 43, 0.05);
+}
+
+.dashboard-numero span {
+  font-size: 13px;
+  color: #6b6375;
+}
+
+.dashboard-numero strong {
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #4d392b;
+}
+
+.dashboard-numero small {
+  font-size: 12.5px;
+  color: #8a8490;
+}
+
+/* BLOCOS */
+
+.dashboard__bloco {
+  padding: 22px 24px;
+
+  background-color: #ffffff;
+  border: 1px solid #e5e4e7;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(77, 57, 43, 0.05);
+}
+
+.dashboard__section-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+
+  margin-bottom: 18px;
+}
+
+.dashboard__section-header h2 {
+  margin: 0 0 4px;
+  font-size: 20px;
+  color: #4d392b;
+}
+
+.dashboard__section-header p {
+  margin: 0;
+  font-size: 13.5px;
+  color: #6b6375;
+}
+
+.dashboard__filtros {
+  display: flex;
+  gap: 10px;
+}
+
+.dashboard__filtros select {
+  padding: 9px 12px;
+
+  border: 1px solid #e5e4e7;
+  border-radius: 9px;
+  background-color: #ffffff;
+
+  font-size: 14px;
+  color: #4d392b;
+
+  cursor: pointer;
+}
+
+/* CULTURAS EM CULTIVO */
+
+.dashboard__cultivos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+}
+
+.dashboard-cultivo {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px 14px;
+
+  padding: 16px;
+
+  border: 1px solid #eeeeef;
+  border-radius: 12px;
+}
+
+.dashboard-cultivo__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 48px;
+  height: 48px;
+
+  border-radius: 12px;
+  background-color: #fdf7e7;
+
+  font-size: 24px;
+}
+
+.dashboard-cultivo__texto {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.dashboard-cultivo__texto strong {
+  font-size: 15px;
+  color: #4d392b;
+}
+
+.dashboard-cultivo__texto strong span {
+  font-weight: 400;
+  color: #6b6375;
+}
+
+.dashboard-cultivo__texto small {
+  font-size: 12.5px;
+  color: #8a8490;
+}
+
+.dashboard-cultivo__motivo {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: #4d392b;
+}
+
+/* status: cor reservada + ícone + texto, abaixo do nome da cultura */
+.dashboard-status {
+  grid-column: 2;
+  justify-self: start;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  padding: 5px 10px;
+
+  border-radius: 20px;
+
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.dashboard-status i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 16px;
+  height: 16px;
+
+  border-radius: 50%;
+  /* ícone branco sobre um círculo da cor do status */
+  background-color: var(--cor-status);
+  color: #ffffff;
+
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.dashboard-status--normal {
+  --cor-status: #2a6e3f;
+  background-color: #e8f5ec;
+  color: #2a6e3f;
+}
+
+.dashboard-status--atencao {
+  --cor-status: #a12a2a;
+  background-color: #fdecec;
+  color: #a12a2a;
+}
+
+.dashboard-status--sem_dados,
+.dashboard-status--sem_faixa {
+  --cor-status: #8a8490;
+  background-color: #f1f0f3;
+  color: #6b6375;
+}
+
+/* ALERTAS E PRÓXIMA COLHEITA */
+
+.dashboard__bottom {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.dashboard-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+
+  padding: 20px 22px;
+
+  background-color: #ffffff;
+  border: 1px solid #e5e4e7;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(77, 57, 43, 0.05);
+}
+
+.dashboard-info__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  width: 46px;
+  height: 46px;
+
+  border-radius: 12px;
+  background-color: #fdf7e7;
+
+  font-size: 22px;
+}
+
+.dashboard-info__label {
+  display: block;
+  margin-bottom: 4px;
+
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #8a8490;
+}
+
+.dashboard-info h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  color: #4d392b;
+}
+
+.dashboard-info p {
+  margin: 0;
+  font-size: 13px;
+  color: #6b6375;
+}
+
+.dashboard-info__atrasada {
+  font-weight: 600;
+  color: #a12a2a !important;
+}
+
+.dashboard-info__lista {
+  margin: 6px 0 0;
+  padding-left: 16px;
+  font-size: 13px;
+  color: #4d392b;
+}
+
+@media (max-width: 960px) {
+  .dashboard__resumo {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard__bottom {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboard__header h1 {
+    font-size: 28px;
+  }
+
+  .dashboard__section-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dashboard__filtros {
+    flex-direction: column;
+  }
+}
