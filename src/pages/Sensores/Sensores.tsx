@@ -4,6 +4,7 @@ import Modal from '../../components/Modal/Modal'
 import { apiFetch } from '../../lib/api'
 import CredenciaisSensor, { type Credenciais } from './CredenciaisSensor'
 import EditarMedidasForm from './EditarMedidasForm'
+import GuiaArduino from './GuiaArduino'
 import NovoSensorForm from './NovoSensorForm'
 import {
   STATUS_LABELS,
@@ -20,6 +21,13 @@ type ModalEstado =
   | { tipo: 'novo' }
   | {
       tipo: 'credenciais'
+      titulo: string
+      credenciais: Credenciais
+      medidas: Sensor['medidas']
+    }
+  | {
+      /** passo seguinte às credenciais: gravar a placa com a biblioteca */
+      tipo: 'arduino'
       titulo: string
       credenciais: Credenciais
       medidas: Sensor['medidas']
@@ -202,11 +210,13 @@ function Sensores() {
         titulo={
           modal.tipo === 'credenciais'
             ? modal.titulo
+            : modal.tipo === 'arduino'
+              ? 'Configurar a placa no Arduino IDE'
             : modal.tipo === 'medidas'
               ? `Dados de ${modal.sensor.codigo_sensor}`
               : 'Cadastrar sensor'
         }
-        largo={modal.tipo === 'novo' || modal.tipo === 'medidas'}
+        largo={modal.tipo === 'novo' || modal.tipo === 'medidas' || modal.tipo === 'arduino'}
         onFechar={fecharModal}
       >
         {modal.tipo === 'novo' && (
@@ -220,6 +230,14 @@ function Sensores() {
           <CredenciaisSensor
             credenciais={modal.credenciais}
             medidas={modal.medidas}
+            onConcluir={() => setModal({ ...modal, tipo: 'arduino' })}
+          />
+        )}
+        {modal.tipo === 'arduino' && (
+          <GuiaArduino
+            credenciais={modal.credenciais}
+            medidas={modal.medidas}
+            onVoltar={() => setModal({ ...modal, tipo: 'credenciais' })}
             onConcluir={fecharModal}
           />
         )}

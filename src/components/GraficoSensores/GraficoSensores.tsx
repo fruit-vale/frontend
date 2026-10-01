@@ -15,6 +15,8 @@ type Props = {
   intervalo: 'hour' | 'day'
   /** nome do dado, para o título acessível (ex.: "Temperatura") */
   titulo: string
+  /** abre a visão em tabela (leituras e médias) */
+  onVerDados?: () => void
 }
 
 // paleta categórica em ordem fixa (validada p/ daltonismo nos pares vizinhos);
@@ -51,12 +53,11 @@ function escalaY(min: number, max: number) {
 }
 
 /** Gráfico de linhas, uma por sensor, com linha-guia + dica ao passar o mouse. */
-function GraficoSensores({ series: todas, unidade, intervalo, titulo }: Props) {
+function GraficoSensores({ series: todas, unidade, intervalo, titulo, onVerDados }: Props) {
   const series = useMemo(() => todas.slice(0, MAX_SERIES), [todas])
   const caixa = useRef<HTMLDivElement>(null)
   const [largura, setLargura] = useState(0)
   const [foco, setFoco] = useState<number | null>(null)
-  const [tabela, setTabela] = useState(false)
 
   // largura real do contêiner: o texto do SVG fica nítido, sem esticar
   useEffect(() => {
@@ -169,7 +170,7 @@ function GraficoSensores({ series: todas, unidade, intervalo, titulo }: Props) {
             width={w}
             height={ALTURA}
             role="img"
-            aria-label={`${titulo} de ${series.length} sensor(es), de ${fmtInstante(dados.instantes[0])} a ${fmtInstante(dados.instantes[dados.instantes.length - 1])}. Os valores estão na tabela abaixo.`}
+            aria-label={`${titulo} de ${series.length} sensor(es), de ${fmtInstante(dados.instantes[0])} a ${fmtInstante(dados.instantes[dados.instantes.length - 1])}. Os valores estão em "Ver dados em tabela".`}
           >
             {dados.y.marcas.map((v) => (
               <g key={v}>
@@ -260,33 +261,10 @@ function GraficoSensores({ series: todas, unidade, intervalo, titulo }: Props) {
         )}
       </div>
 
-      <button type="button" className="grafico-sensores__alternar" onClick={() => setTabela((t) => !t)}>
-        {tabela ? 'Ocultar tabela' : 'Ver dados em tabela'}
-      </button>
-      {tabela && (
-        <div className="grafico-sensores__tabela">
-          <table>
-            <thead>
-              <tr>
-                <th>{intervalo === 'hour' ? 'Hora' : 'Dia'}</th>
-                {series.map((s) => (
-                  <th key={s.sensor}>{nomeSerie(s)}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {[...dados.instantes].reverse().map((instante) => (
-                <tr key={instante}>
-                  <td>{fmtInstante(instante)}</td>
-                  {series.map((s, i) => {
-                    const v = dados.porSerie[i].get(instante)
-                    return <td key={s.sensor}>{v === undefined ? '—' : `${fmtValor(v)}${un}`}</td>
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {onVerDados && (
+        <button type="button" className="grafico-sensores__alternar" onClick={onVerDados}>
+          Ver dados em tabela
+        </button>
       )}
     </div>
   )

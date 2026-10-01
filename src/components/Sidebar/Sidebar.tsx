@@ -239,68 +239,111 @@ function IconSair() {
 type NavItem = {
   to: string
   label: string
+  /** dica ao passar o mouse: o que se faz na tela */
+  dica: string
   icon: ReactNode
   end?: boolean
   roles: Role[]
 }
 
+type NavSecao = {
+  titulo: string | null
+  /** subtítulo da seção, só para o administrador */
+  dicaAdmin?: string
+  itens: NavItem[]
+}
+
 const ALL_ROLES: Role[] = ['administrador', 'produtor', 'analista']
 
-const navItems: NavItem[] = [
-  { to: '/', label: 'Início', icon: <IconInicio />, end: true, roles: ALL_ROLES },
+// Os cadastros seguem a ordem em que precisam ser feitos (a mesma do guia
+// "Primeiros passos" da tela inicial): cada um depende do anterior.
+const navSecoes: NavSecao[] = [
   {
-    to: '/cultivos',
-    label: 'Cultivos e Lotes',
-    icon: <IconCultivos />,
-    roles: ['administrador', 'produtor'],
+    titulo: null,
+    itens: [
+      {
+        to: '/',
+        label: 'Início',
+        dica: 'Resumo da operação, gráfico dos sensores e alertas recentes',
+        icon: <IconInicio />,
+        end: true,
+        roles: ALL_ROLES,
+      },
+    ],
   },
   {
-    to: '/culturas',
-    label: 'Culturas',
-    icon: <IconCulturas />,
-    roles: ['administrador', 'produtor'],
+    titulo: 'Cadastros',
+    dicaAdmin: 'na ordem de configuração',
+    itens: [
+      {
+        to: '/empresas',
+        label: 'Empresas',
+        dica: 'Os clientes da plataforma: tudo pertence a uma empresa',
+        icon: <IconEmpresas />,
+        roles: ['administrador'],
+      },
+      {
+        to: '/usuarios',
+        label: 'Usuários',
+        dica: 'Contas de acesso: produtores de cada empresa e analistas',
+        icon: <IconUsuarios />,
+        roles: ['administrador'],
+      },
+      {
+        to: '/propriedades',
+        label: 'Propriedades',
+        dica: 'Fazendas e sítios das empresas, com a localização no mapa',
+        icon: <IconPropriedades />,
+        roles: ['administrador'],
+      },
+      {
+        to: '/culturas',
+        label: 'Culturas',
+        dica: 'O que é plantado e a faixa ideal usada nos alertas',
+        icon: <IconCulturas />,
+        roles: ['administrador', 'produtor'],
+      },
+      {
+        to: '/cultivos',
+        label: 'Cultivos e Lotes',
+        dica: 'Áreas plantadas no mapa e o histórico de safras de cada uma',
+        icon: <IconCultivos />,
+        roles: ['administrador', 'produtor'],
+      },
+      {
+        to: '/sensores',
+        label: 'Sensores',
+        dica: 'Dispositivos dos lotes: credenciais e dados que enviam',
+        icon: <IconSensores />,
+        roles: ['administrador', 'produtor'],
+      },
+    ],
   },
   {
-    to: '/sensores',
-    label: 'Sensores',
-    icon: <IconSensores />,
-    roles: ['administrador', 'produtor'],
-  },
-  {
-    to: '/leituras-alertas',
-    label: 'Leituras e Alertas',
-    icon: <IconAlertas />,
-    roles: ['administrador', 'produtor', 'analista'],
-  },
-  {
-    to: '/previsao',
-    label: 'Previsão de Colheita',
-    icon: <IconPrevisao />,
-    roles: ['administrador', 'produtor', 'analista'],
-  },
-  {
-    to: '/mercado',
-    label: 'Mercado e Exportação',
-    icon: <IconMercado />,
-    roles: ['administrador', 'analista'],
-  },
-  {
-    to: '/empresas',
-    label: 'Empresas',
-    icon: <IconEmpresas />,
-    roles: ['administrador'],
-  },
-  {
-    to: '/propriedades',
-    label: 'Propriedades',
-    icon: <IconPropriedades />,
-    roles: ['administrador'],
-  },
-  {
-    to: '/usuarios',
-    label: 'Usuários',
-    icon: <IconUsuarios />,
-    roles: ['administrador'],
+    titulo: 'Acompanhamento',
+    itens: [
+      {
+        to: '/leituras-alertas',
+        label: 'Leituras e Alertas',
+        dica: 'Leituras recebidas dos sensores e alertas fora da faixa ideal',
+        icon: <IconAlertas />,
+        roles: ALL_ROLES,
+      },
+      {
+        to: '/previsao',
+        label: 'Previsão de Colheita',
+        dica: 'Estimativa de quando cada lote fica pronto para colher',
+        icon: <IconPrevisao />,
+        roles: ALL_ROLES,
+      },
+      {
+        to: '/mercado',
+        label: 'Mercado e Exportação',
+        dica: 'Preços e dados de exportação das frutas',
+        icon: <IconMercado />,
+        roles: ['administrador', 'analista'],
+      },
+    ],
   },
 ]
 
@@ -314,8 +357,10 @@ function Sidebar({ hidden = false, mobileOpen = false, onNavigate }: SidebarProp
   const { user, logout } = useAuth()
   const navigate = useNavigate()
 
-  const visibleItems = user
-    ? navItems.filter((item) => item.roles.includes(user.role))
+  const secoesVisiveis = user
+    ? navSecoes
+        .map((secao) => ({ ...secao, itens: secao.itens.filter((item) => item.roles.includes(user.role)) }))
+        .filter((secao) => secao.itens.length > 0)
     : []
 
   function handleLogout() {
@@ -347,29 +392,47 @@ function Sidebar({ hidden = false, mobileOpen = false, onNavigate }: SidebarProp
       )}
 
       <nav className="sidebar__nav">
-        {visibleItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.end}
-            onClick={onNavigate}
-            className={({ isActive }) =>
-              isActive ? 'sidebar__link sidebar__link--active' : 'sidebar__link'
-            }
-          >
-            {item.icon}
-            <span>{item.label}</span>
-          </NavLink>
+        {secoesVisiveis.map((secao) => (
+          <div key={secao.titulo ?? 'principal'} className="sidebar__secao">
+            {secao.titulo && (
+              <div className="sidebar__secao-titulo">
+                <span>{secao.titulo}</span>
+                {secao.dicaAdmin && user?.role === 'administrador' && (
+                  <small>{secao.dicaAdmin}</small>
+                )}
+              </div>
+            )}
+            {secao.itens.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                title={item.dica}
+                onClick={onNavigate}
+                className={({ isActive }) =>
+                  isActive ? 'sidebar__link sidebar__link--active' : 'sidebar__link'
+                }
+              >
+                {item.icon}
+                <span>{item.label}</span>
+              </NavLink>
+            ))}
+          </div>
         ))}
       </nav>
 
       <div className="sidebar__bottom">
-        <Link className="sidebar__link" to="/perfil" onClick={onNavigate}>
+        <Link className="sidebar__link" to="/perfil" title="Seus dados e senha" onClick={onNavigate}>
           <IconPerfil />
           <span>Perfil</span>
         </Link>
         {user?.role === 'administrador' && (
-          <Link className="sidebar__link" to="/configuracoes" onClick={onNavigate}>
+          <Link
+            className="sidebar__link"
+            to="/configuracoes"
+            title="Preferências gerais da plataforma"
+            onClick={onNavigate}
+          >
             <IconConfiguracoes />
             <span>Configurações</span>
           </Link>

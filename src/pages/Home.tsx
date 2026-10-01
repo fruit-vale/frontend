@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
+import DadosSensores, { type RespostaLeituras } from '../components/GraficoSensores/DadosSensores'
 import GraficoSensores, { type Serie } from '../components/GraficoSensores/GraficoSensores'
+import PrimeirosPassos from '../components/PrimeirosPassos/PrimeirosPassos'
 import { apiFetch } from '../lib/api'
 import { TIPO_MEDIDA_LABELS, type TipoMedida } from './Sensores/tipos'
 import './Home.css'
@@ -118,6 +120,14 @@ function Home() {
   }, [tipo, dias])
   const serieAtual = serie?.chave === chaveSerie ? serie : undefined
 
+  // "Ver dados em tabela": leituras do mesmo tipo e período do gráfico
+  const [tabelaAberta, setTabelaAberta] = useState(false)
+  const buscarLeituras = useCallback(
+    () => apiFetch<RespostaLeituras>(`/painel/leituras?tipo=${tipo}&dias=${dias}`),
+    [tipo, dias],
+  )
+  const periodo = PERIODOS.find((p) => p.dias === dias)?.rotulo.toLowerCase() ?? ''
+
   if (!user) return null
   const gestor = user.role === 'administrador' || user.role === 'produtor'
   const r = painel?.resumo
@@ -133,6 +143,9 @@ function Home() {
             : `Acompanhe as plantações de ${user.empresa?.razao_social ?? 'sua empresa'}.`}
         </p>
       </header>
+
+      {/* guia de configuração: só o administrador cadastra empresas e propriedades */}
+      {user.role === 'administrador' && <PrimeirosPassos />}
 
       {erro && (
         <p className="empty-state" role="alert">
@@ -253,6 +266,18 @@ function Home() {
               unidade={serieAtual.dados!.unidade}
               intervalo={serieAtual.dados!.intervalo}
               titulo={tipo ? TIPO_MEDIDA_LABELS[tipo] : ''}
+              onVerDados={() => setTabelaAberta(true)}
+            />
+          )}
+          {serieAtual?.dados && tipo && (
+            <DadosSensores
+              aberto={tabelaAberta}
+              onFechar={() => setTabelaAberta(false)}
+              titulo={`${TIPO_MEDIDA_LABELS[tipo]} — ${periodo}`}
+              series={serieAtual.dados.series}
+              unidade={serieAtual.dados.unidade}
+              intervalo={serieAtual.dados.intervalo}
+              buscarLeituras={buscarLeituras}
             />
           )}
         </section>

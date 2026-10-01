@@ -163,35 +163,92 @@
   cursor: pointer;
 }
 
-.grafico-sensores__tabela {
-  max-height: 260px;
+/* MODAL "VER DADOS EM TABELA" */
+
+.dados-sensores {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dados-sensores__barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dados-sensores__abas {
+  display: inline-flex;
+
+  padding: 3px;
+
+  border: 1px solid #e5e4e7;
+  border-radius: 10px;
+  background-color: #faf9fc;
+}
+
+.dados-sensores__abas button {
+  padding: 8px 14px;
+
+  border: none;
+  border-radius: 8px;
+  background: none;
+
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b6375;
+
+  cursor: pointer;
+}
+
+.dados-sensores__abas button[aria-selected='true'] {
+  background-color: #ffffff;
+  color: #4b24ba;
+  box-shadow: 0 1px 3px rgba(8, 6, 13, 0.12);
+}
+
+.dados-sensores__tabela {
+  max-height: min(60vh, 560px);
   overflow: auto;
 
   border: 1px solid #e5e4e7;
   border-radius: 10px;
 }
 
-.grafico-sensores__tabela table {
+.dados-sensores__tabela table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12.5px;
-  color: var(--texto-primario);
+  font-size: 13px;
+  color: #4d392b;
 }
 
-.grafico-sensores__tabela th,
-.grafico-sensores__tabela td {
-  padding: 7px 12px;
+.dados-sensores__tabela th,
+.dados-sensores__tabela td {
+  padding: 8px 14px;
   border-bottom: 1px solid #eeeeef;
   text-align: left;
   white-space: nowrap;
 }
 
-.grafico-sensores__tabela th {
+.dados-sensores__tabela th {
   position: sticky;
   top: 0;
+  z-index: 1;
   background-color: #fdf7e7;
   font-size: 11px;
-  text-transform: uppercase;
   letter-spacing: 0.4px;
-  color: var(--texto-secundario);
+  text-transform: uppercase;
+  color: #6b6375;
+}
+
+/* números alinhados à direita, com largura fixa por dígito */
+.dados-sensores__tabela .dados-sensores__num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.dados-sensores__tabela tbody tr:hover {
+  background-color: #faf9fc;
 }
