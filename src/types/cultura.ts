@@ -13,6 +13,10 @@ export type Cultura = Omit<CulturaResumo, 'empresa'> & {
   umidade_recomendada_min: number | null
   umidade_recomendada_max: number | null
   descricao: string | null
+  /** abaixo dela a planta não se desenvolve (°C) */
+  temp_base_graus_dia: number | null
+  /** graus-dia somados do plantio à colheita */
+  graus_dia_ciclo: number | null
   /** null = cultura da plataforma, visível a todas as empresas */
   empresa: { id: number; razao_social: string } | null
   total_lotes: number
@@ -28,6 +32,8 @@ export type CulturaPayload = {
   umidade_recomendada_min: number | null
   umidade_recomendada_max: number | null
   ciclo_medio_dias: number | null
+  temp_base_graus_dia: number | null
+  graus_dia_ciclo: number | null
 }
 
 export const nomeCultura = (c: { nome: string; variedade: string | null }) =>

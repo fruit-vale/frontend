@@ -69,12 +69,9 @@ export function CredenciaisSensor({ credenciais, medidas, onConcluir }: Props) {
 
       <CopyRow rotulo="Usuário" valor={credenciais.username} />
       <CopyRow rotulo="Senha" valor={credenciais.senha} />
-      <CopyRow rotulo="Host" valor={env.mqttHost} />
-      <CopyRow rotulo="Porta (TLS)" valor={String(MQTT_PORTA_TLS)} />
-      <CopyRow rotulo="WebSocket" valor={MQTT_WSS} />
+      {/* host, porta e tópico já vêm na biblioteca FruitVale; ficam só no .txt */}
       {topico !== null && (
         <>
-          <CopyRow rotulo="Tópico" valor={topico} />
           <CopyRow rotulo="Exemplo" valor={exemplo} />
           <ul className="space-y-1 text-sm text-muted-foreground">
             {medidas.map((m) => (

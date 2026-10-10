@@ -1,21 +1,26 @@
 import { useMemo, useState } from 'react'
 import {
   ActivityIcon,
+  BuildingIcon,
   CircleCheckIcon,
-  CircleOffIcon,
+  FilterXIcon,
   KeyRoundIcon,
   ListChecksIcon,
+  MapPinIcon,
   MoreHorizontalIcon,
   PlusIcon,
   PowerIcon,
   RadioTowerIcon,
+  SlidersHorizontalIcon,
+  TriangleAlertIcon,
   Trash2Icon,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/api'
 import { AppDialog } from '@/components/shared/AppDialog'
-import { EmptyState, ErrorMessage } from '@/components/shared/EmptyState'
-import { DataCard, EntityCell, NoResults } from '@/components/shared/DataCard'
+import { ErrorMessage } from '@/components/shared/EmptyState'
+import { Dados, EntityCard } from '@/components/shared/EntityCard'
+import { ListaPaginada } from '@/components/shared/ListaPaginada'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { SelectField } from '@/components/shared/SelectField'
 import { StatCard } from '@/components/shared/StatCard'
@@ -29,35 +34,27 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { useAuth } from '@/hooks/use-auth'
 import { useConfirm } from '@/hooks/use-confirm'
 import { useRequest } from '@/hooks/use-request'
-import { useSearch } from '@/hooks/use-search'
-import { plural } from '@/lib/format'
+import { formatarData, plural } from '@/lib/format'
 import { lotesService, sensoresService } from '@/services'
 import {
   ACESSO_MQTT_LABELS,
   STATUS_SENSOR_LABELS,
+  TIPO_MEDIDA_LABELS,
   type Credenciais,
   type LoteResumo,
   type Medida,
   type Sensor,
   type StatusSensor,
+  type TipoMedida,
 } from '@/types/sensor'
 import { CredenciaisSensor } from './CredenciaisSensor'
 import { EditarMedidasForm } from './EditarMedidasForm'
 import { GuiaArduino } from './GuiaArduino'
+import { MoverLoteForm } from './MoverLoteForm'
 import { NovoSensorForm } from './NovoSensorForm'
-
-type FiltroStatus = 'todos' | StatusSensor
 
 type Dialogo =
   | { tipo: 'fechado' }
@@ -66,6 +63,7 @@ type Dialogo =
   /** passo seguinte às credenciais: gravar a placa com a biblioteca */
   | { tipo: 'arduino'; titulo: string; credenciais: Credenciais; medidas: Medida[] }
   | { tipo: 'medidas'; sensor: Sensor }
+  | { tipo: 'lote'; sensor: Sensor }
 
 const porCodigo = (a: Sensor, b: Sensor) =>
   a.codigo_sensor.localeCompare(b.codigo_sensor, 'pt-BR')
@@ -76,12 +74,27 @@ const STATUS_TONE: Record<StatusSensor, Tone> = {
   MANUTENCAO: 'warning',
 }
 
-const FILTROS_STATUS = [
-  { value: 'todos', label: 'Todos' },
-  { value: 'ATIVO', label: 'Ativos' },
-  { value: 'INATIVO', label: 'Inativos' },
-  { value: 'MANUTENCAO', label: 'Em manutenção' },
-]
+const TODOS = 'todos'
+
+type Filtros = {
+  status: string
+  empresa: string
+  propriedade: string
+  lote: string
+  dado: string
+  mqtt: string
+  leituras: string
+}
+
+const SEM_FILTROS: Filtros = {
+  status: TODOS,
+  empresa: TODOS,
+  propriedade: TODOS,
+  lote: TODOS,
+  dado: TODOS,
+  mqtt: TODOS,
+  leituras: TODOS,
+}
 
 type Dados = { sensores: Sensor[]; lotes: LoteResumo[] }
 
@@ -90,8 +103,8 @@ export default function SensoresPage() {
   const confirm = useConfirm()
   const admin = user?.role === 'administrador'
 
-  const [filtroStatus, setFiltroStatus] = useState<FiltroStatus>('todos')
-  const [filtroEmpresa, setFiltroEmpresa] = useState('todas')
+  const [filtros, setFiltros] = useState<Filtros>(SEM_FILTROS)
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false)
   const [emAndamento, setEmAndamento] = useState<number | null>(null)
   const [dialogo, setDialogo] = useState<Dialogo>({ tipo: 'fechado' })
 
@@ -103,7 +116,7 @@ export default function SensoresPage() {
       ])
       return { sensores: sensores.sort(porCodigo), lotes }
     },
-    { errorPrefix: 'Não foi possível carregar os sensores' },
+    { errorPrefix: 'Não foi possível carregar os sensores', cacheKey: 'pagina-sensores' },
   )
   const sensores = useMemo(() => data?.sensores ?? [], [data])
   const lotes = data?.lotes ?? []
@@ -113,29 +126,60 @@ export default function SensoresPage() {
   const substituir = (sensor: Sensor) =>
     atualizarSensores((atuais) => atuais.map((s) => (s.id === sensor.id ? sensor : s)))
 
-  // empresas presentes na lista, para o filtro do administrador
-  const empresas = useMemo(() => {
-    const unicas = new Map(sensores.map((s) => [s.empresa.id, s.empresa]))
-    return [...unicas.values()].sort((a, b) =>
+
+  const mudar = (campo: keyof Filtros, valor: string) =>
+    setFiltros((atual) => ({
+      ...atual,
+      [campo]: valor,
+      // o lote escolhido pode ser de outra propriedade ou empresa
+      ...(campo === 'propriedade' || campo === 'empresa' ? { lote: TODOS } : {}),
+    }))
+  const filtrosAtivos = Object.values(filtros).filter((v) => v !== TODOS).length
+
+  // opções de cada filtro, tiradas dos próprios sensores
+  const opcoes = useMemo(() => {
+    const unicos = <T extends { id: number }>(itens: T[]) => [
+      ...new Map(itens.map((i) => [i.id, i])).values(),
+    ]
+    const empresas = unicos(sensores.map((s) => s.empresa)).sort((a, b) =>
       a.razao_social.localeCompare(b.razao_social, 'pt-BR'),
     )
-  }, [sensores])
+    const propriedades = unicos(
+      sensores
+        .filter((s) => filtros.empresa === TODOS || s.empresa.id === Number(filtros.empresa))
+        .map((s) => s.propriedade),
+    ).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+    const lotesDisponiveis = unicos(
+      sensores
+        .filter(
+          (s) =>
+            (filtros.empresa === TODOS || s.empresa.id === Number(filtros.empresa)) &&
+            (filtros.propriedade === TODOS || s.propriedade.id === Number(filtros.propriedade)),
+        )
+        .flatMap((s) => (s.lote ? [s.lote] : [])),
+    ).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+    const dados = [...new Set(sensores.flatMap((s) => s.medidas.map((m) => m.tipo)))].sort(
+      (a, b) => TIPO_MEDIDA_LABELS[a].localeCompare(TIPO_MEDIDA_LABELS[b], 'pt-BR'),
+    )
+    return { empresas, propriedades, lotes: lotesDisponiveis, dados }
+  }, [sensores, filtros.empresa, filtros.propriedade])
 
-  const daEmpresa =
-    filtroEmpresa === 'todas'
-      ? sensores
-      : sensores.filter((s) => s.empresa.id === Number(filtroEmpresa))
-  const ativos = daEmpresa.filter((s) => s.status === 'ATIVO').length
-  const inativos = daEmpresa.filter((s) => s.status === 'INATIVO').length
-  const visiveis = daEmpresa.filter((s) => filtroStatus === 'todos' || s.status === filtroStatus)
+  const visiveis = sensores.filter(
+    (s) =>
+      (filtros.status === TODOS || s.status === filtros.status) &&
+      (filtros.empresa === TODOS || s.empresa.id === Number(filtros.empresa)) &&
+      (filtros.propriedade === TODOS || s.propriedade.id === Number(filtros.propriedade)) &&
+      (filtros.lote === TODOS ||
+        (filtros.lote === 'sem' ? s.lote === null : s.lote?.id === Number(filtros.lote))) &&
+      (filtros.dado === TODOS || s.medidas.some((m) => m.tipo === filtros.dado)) &&
+      (filtros.mqtt === TODOS || (s.acesso_mqtt ?? 'desconhecido') === filtros.mqtt) &&
+      (filtros.leituras === TODOS ||
+        (filtros.leituras === 'com' ? s.total_leituras > 0 : s.total_leituras === 0)),
+  )
 
-  const { query, setQuery, filtrados: buscados } = useSearch(visiveis, (x) => [
-    x.codigo_sensor,
-    x.tipo,
-    x.lote?.nome,
-    x.propriedade.nome,
-    x.empresa.razao_social,
-  ])
+  const ativos = sensores.filter((s) => s.status === 'ATIVO').length
+  const atencao = sensores.filter((s) => s.status !== 'ATIVO').length
+  const leituras = sensores.reduce((soma, s) => soma + s.total_leituras, 0)
 
   const fechar = () => setDialogo({ tipo: 'fechado' })
 
@@ -223,7 +267,9 @@ export default function SensoresPage() {
         ? 'Configurar a placa no Arduino IDE'
         : dialogo.tipo === 'medidas'
           ? `Dados de ${dialogo.sensor.codigo_sensor}`
-          : 'Cadastrar sensor'
+          : dialogo.tipo === 'lote'
+            ? `Mudar ${dialogo.sensor.codigo_sensor} de lote`
+            : 'Cadastrar sensor'
 
   return (
     <section className="space-y-6">
@@ -271,6 +317,19 @@ export default function SensoresPage() {
             onConcluir={fechar}
           />
         )}
+        {dialogo.tipo === 'lote' && (
+          <MoverLoteForm
+            key={dialogo.sensor.id}
+            sensor={dialogo.sensor}
+            lotes={lotes}
+            onSalvo={(salvo) => {
+              substituir(salvo)
+              fechar()
+              toast.success(`${salvo.codigo_sensor} agora está em ${salvo.lote?.nome}.`)
+            }}
+            onCancelar={fechar}
+          />
+        )}
         {dialogo.tipo === 'medidas' && (
           <EditarMedidasForm
             key={dialogo.sensor.id}
@@ -285,175 +344,287 @@ export default function SensoresPage() {
         )}
       </AppDialog>
 
-      <div className="grid gap-3 sm:grid-cols-3">
+      <ErrorMessage message={error} />
+
+      <section aria-label="Resumo" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          icon={<RadioTowerIcon />}
+          label="Total de sensores"
+          value={sensores.length}
+          loading={loading}
+        />
+        <StatCard icon={<CircleCheckIcon />} label="Ativos" value={ativos} loading={loading} />
+        <StatCard
+          icon={<TriangleAlertIcon />}
+          label="Inativos ou em manutenção"
+          value={atencao}
+          loading={loading}
+        />
         <StatCard
           icon={<ActivityIcon />}
-          label="Total de sensores"
-          value={daEmpresa.length}
+          label="Leituras registradas"
+          value={leituras.toLocaleString('pt-BR')}
           loading={loading}
         />
-        <StatCard
-          icon={<CircleCheckIcon />}
-          label="Sensores ativos"
-          value={ativos}
-          loading={loading}
-        />
-        <StatCard
-          icon={<CircleOffIcon />}
-          label="Sensores inativos"
-          value={inativos}
-          loading={loading}
-        />
-      </div>
+      </section>
 
-      <ErrorMessage message={error} />
-      {loading && <Skeleton className="h-48 w-full" />}
-
-      {!loading && !error && sensores.length === 0 && (
-        <EmptyState>Nenhum sensor cadastrado ainda.</EmptyState>
-      )}
-
-      {sensores.length > 0 && (
-        <DataCard
-          title="Sensores cadastrados"
-          shown={buscados.length}
-          total={sensores.length}
-          search={query}
-          onSearchChange={setQuery}
-          searchPlaceholder="Buscar por código, tipo ou lote"
-          filters={
+      {loading ? (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} className="h-52" />
+          ))}
+        </div>
+      ) : (
+        <ListaPaginada
+          itens={visiveis}
+          campos={(x) => [
+            x.codigo_sensor,
+            x.tipo,
+            x.lote?.nome,
+            x.propriedade.nome,
+            x.empresa.razao_social,
+            ...x.medidas.map((m) => m.nome),
+          ]}
+          rotuloBusca="Buscar por código, tipo, lote ou dado"
+          vazio={
+            sensores.length === 0
+              ? 'Nenhum sensor cadastrado ainda.'
+              : 'Nenhum sensor encontrado com esses filtros.'
+          }
+          porPagina={9}
+          listaClassName="grid gap-3 md:grid-cols-2 xl:grid-cols-3"
+          filtros={
             <>
-              {admin && empresas.length > 1 && (
-                <SelectField
-                  aria-label="Filtrar por empresa"
-                  value={filtroEmpresa}
-                  onValueChange={setFiltroEmpresa}
-                  className="h-9 w-52"
-                  options={[
-                    { value: 'todas', label: 'Todas as empresas' },
-                    ...empresas.map((e) => ({ value: String(e.id), label: e.razao_social })),
-                  ]}
-                />
+              <Button
+                type="button"
+                variant="outline"
+                aria-expanded={filtrosAbertos}
+                onClick={() => setFiltrosAbertos((v) => !v)}
+                className="h-9"
+              >
+                <SlidersHorizontalIcon />
+                Filtros
+                {filtrosAtivos > 0 && (
+                  <span className="flex size-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                    {filtrosAtivos}
+                  </span>
+                )}
+              </Button>
+              {filtrosAbertos && (
+                <div className="flex basis-full flex-wrap items-center gap-2">
+                  <SelectField
+                    aria-label="Status"
+                    value={filtros.status}
+                    onValueChange={(v) => mudar('status', v)}
+                    options={[
+                      { value: TODOS, label: 'Todos os status' },
+                      ...(Object.keys(STATUS_SENSOR_LABELS) as StatusSensor[]).map((s) => ({
+                        value: s,
+                        label: STATUS_SENSOR_LABELS[s],
+                      })),
+                    ]}
+                    className="h-9 w-44"
+                  />
+                  {admin && opcoes.empresas.length > 1 && (
+                    <SelectField
+                      aria-label="Empresa"
+                      value={filtros.empresa}
+                      onValueChange={(v) => mudar('empresa', v)}
+                      options={[
+                        { value: TODOS, label: 'Todas as empresas' },
+                        ...opcoes.empresas.map((e) => ({
+                          value: String(e.id),
+                          label: e.razao_social,
+                        })),
+                      ]}
+                      className="h-9 w-52"
+                    />
+                  )}
+                  <SelectField
+                    aria-label="Propriedade"
+                    value={filtros.propriedade}
+                    onValueChange={(v) => mudar('propriedade', v)}
+                    options={[
+                      { value: TODOS, label: 'Todas as propriedades' },
+                      ...opcoes.propriedades.map((p) => ({ value: String(p.id), label: p.nome })),
+                    ]}
+                    className="h-9 w-52"
+                  />
+                  <SelectField
+                    aria-label="Lote"
+                    value={filtros.lote}
+                    onValueChange={(v) => mudar('lote', v)}
+                    options={[
+                      { value: TODOS, label: 'Todos os lotes' },
+                      { value: 'sem', label: 'Sem lote' },
+                      ...opcoes.lotes.map((l) => ({ value: String(l.id), label: l.nome })),
+                    ]}
+                    className="h-9 w-44"
+                  />
+                  <SelectField
+                    aria-label="Dado medido"
+                    value={filtros.dado}
+                    onValueChange={(v) => mudar('dado', v)}
+                    options={[
+                      { value: TODOS, label: 'Todos os dados' },
+                      ...opcoes.dados.map((d: TipoMedida) => ({
+                        value: d,
+                        label: TIPO_MEDIDA_LABELS[d],
+                      })),
+                    ]}
+                    className="h-9 w-44"
+                  />
+                  <SelectField
+                    aria-label="Acesso MQTT"
+                    value={filtros.mqtt}
+                    onValueChange={(v) => mudar('mqtt', v)}
+                    options={[
+                      { value: TODOS, label: 'Qualquer acesso MQTT' },
+                      ...Object.entries(ACESSO_MQTT_LABELS).map(([value, label]) => ({
+                        value,
+                        label,
+                      })),
+                    ]}
+                    className="h-9 w-52"
+                  />
+                  <SelectField
+                    aria-label="Leituras"
+                    value={filtros.leituras}
+                    onValueChange={(v) => mudar('leituras', v)}
+                    options={[
+                      { value: TODOS, label: 'Com ou sem leituras' },
+                      { value: 'com', label: 'Com leituras' },
+                      { value: 'sem', label: 'Sem leituras' },
+                    ]}
+                    className="h-9 w-48"
+                  />
+                  {filtrosAtivos > 0 && (
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setFiltros(SEM_FILTROS)}>
+                      <FilterXIcon />
+                      Limpar filtros
+                    </Button>
+                  )}
+                </div>
               )}
-              <SelectField
-                aria-label="Filtrar sensores"
-                value={filtroStatus}
-                onValueChange={(v) => setFiltroStatus(v as FiltroStatus)}
-                options={FILTROS_STATUS}
-                className="h-9 w-40"
-              />
             </>
           }
-        >
-          {buscados.length === 0 ? (
-            <NoResults>Nenhum sensor encontrado com esses filtros.</NoResults>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Sensor</TableHead>
-                  <TableHead className="hidden sm:table-cell">Lote</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-14" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {buscados.map((sensor) => {
-                  const ocupado = emAndamento === sensor.id
-                  const temLeituras = sensor.total_leituras > 0
-                  return (
-                    <TableRow key={sensor.id}>
-                      <TableCell>
-                        <EntityCell
-                          icon={<RadioTowerIcon />}
-                          title={sensor.codigo_sensor}
-                          subtitle={`${sensor.tipo} · ${sensor.total_leituras} ${plural(sensor.total_leituras, 'leitura', 'leituras')}`}
-                        />
-                      </TableCell>
-
-                      <TableCell className="hidden sm:table-cell">
-                        <strong className="block text-sm font-medium">
-                          {sensor.lote?.nome ?? 'Sem lote'}
-                        </strong>
-                        <span className="text-xs text-muted-foreground">
-                          {sensor.propriedade.nome}
-                          {admin && ` · ${sensor.empresa.razao_social}`}
-                        </span>
-                      </TableCell>
-
-                      <TableCell>
-                        <div className="flex flex-col items-start gap-1">
-                          <StatusBadge tone={STATUS_TONE[sensor.status]}>
-                            {STATUS_SENSOR_LABELS[sensor.status]}
-                          </StatusBadge>
-                          {sensor.acesso_mqtt && sensor.acesso_mqtt !== 'ativo' && (
-                            <span className="text-xs text-muted-foreground">
-                              MQTT: {ACESSO_MQTT_LABELS[sensor.acesso_mqtt]}
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
-
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger
-                            render={
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                disabled={ocupado}
-                                aria-label={`Ações de ${sensor.codigo_sensor}`}
-                              />
-                            }
-                          >
-                            <MoreHorizontalIcon />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-52">
-                            <DropdownMenuItem
-                              onClick={() => setDialogo({ tipo: 'medidas', sensor })}
-                            >
-                              <ListChecksIcon />
-                              Dados do sensor
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => novaSenha(sensor)}>
-                              <KeyRoundIcon />
-                              {sensor.acesso_mqtt === 'sem_acesso' ? 'Criar acesso' : 'Nova senha'}
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                alterarStatus(
-                                  sensor,
-                                  sensor.status === 'INATIVO' ? 'ATIVO' : 'INATIVO',
-                                )
-                              }
-                            >
-                              <PowerIcon />
-                              {sensor.status === 'INATIVO' ? 'Reativar' : 'Desativar'}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              variant="destructive"
-                              disabled={temLeituras}
-                              title={
-                                temLeituras
-                                  ? 'Sensor com leituras registradas não pode ser excluído; desative-o.'
-                                  : undefined
-                              }
-                              onClick={() => excluir(sensor)}
-                            >
-                              <Trash2Icon />
-                              Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </DataCard>
+          renderItem={(sensor) => {
+            const ocupado = emAndamento === sensor.id
+            const temLeituras = sensor.total_leituras > 0
+            return (
+              <EntityCard
+                icon={<RadioTowerIcon />}
+                title={sensor.codigo_sensor}
+                subtitle={sensor.tipo}
+                badge={
+                  <StatusBadge tone={STATUS_TONE[sensor.status]}>
+                    {STATUS_SENSOR_LABELS[sensor.status]}
+                  </StatusBadge>
+                }
+                actions={
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={ocupado}
+                      onClick={() => setDialogo({ tipo: 'medidas', sensor })}
+                    >
+                      <ListChecksIcon />
+                      Dados
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            disabled={ocupado}
+                            aria-label={`Mais ações de ${sensor.codigo_sensor}`}
+                          />
+                        }
+                      >
+                        <MoreHorizontalIcon />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-52">
+                        <DropdownMenuItem onClick={() => setDialogo({ tipo: 'lote', sensor })}>
+                          <MapPinIcon />
+                          Mudar de lote
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => novaSenha(sensor)}>
+                          <KeyRoundIcon />
+                          {sensor.acesso_mqtt === 'sem_acesso' ? 'Criar acesso' : 'Nova senha'}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            alterarStatus(sensor, sensor.status === 'INATIVO' ? 'ATIVO' : 'INATIVO')
+                          }
+                        >
+                          <PowerIcon />
+                          {sensor.status === 'INATIVO' ? 'Reativar' : 'Desativar'}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          variant="destructive"
+                          disabled={temLeituras}
+                          title={
+                            temLeituras
+                              ? 'Sensor com leituras registradas não pode ser excluído; desative-o.'
+                              : undefined
+                          }
+                          onClick={() => excluir(sensor)}
+                        >
+                          <Trash2Icon />
+                          Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </>
+                }
+              >
+                <div className="flex flex-col gap-1 text-xs text-muted-foreground [&_svg]:size-3.5 [&_svg]:shrink-0">
+                  <span className="flex items-center gap-1.5">
+                    <MapPinIcon />
+                    <span className="truncate">
+                      {sensor.lote?.nome ?? 'Sem lote'} · {sensor.propriedade.nome}
+                    </span>
+                  </span>
+                  {admin && (
+                    <span className="flex items-center gap-1.5">
+                      <BuildingIcon />
+                      <span className="truncate">{sensor.empresa.razao_social}</span>
+                    </span>
+                  )}
+                </div>
+                {sensor.medidas.length > 0 && (
+                  <ul className="flex flex-wrap gap-1">
+                    {sensor.medidas.map((m) => (
+                      <li
+                        key={m.id}
+                        className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+                      >
+                        {m.nome}
+                        {m.unidade && ` (${m.unidade})`}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <Dados
+                  itens={[
+                    [
+                      'Leituras',
+                      `${sensor.total_leituras.toLocaleString('pt-BR')} ${plural(sensor.total_leituras, 'leitura', 'leituras')}`,
+                    ],
+                    ['Instalação', formatarData(sensor.data_instalacao)],
+                    [
+                      'Acesso MQTT',
+                      sensor.acesso_mqtt ? ACESSO_MQTT_LABELS[sensor.acesso_mqtt] : '—',
+                    ],
+                  ]}
+                />
+              </EntityCard>
+            )
+          }}
+        />
       )}
     </section>
   )

@@ -1,25 +1,19 @@
 import { useState } from 'react'
-import { PencilIcon, PlusIcon, SproutIcon, Trash2Icon } from 'lucide-react'
+import { BuildingIcon, LayersIcon, PencilIcon, PlusIcon, SproutIcon, Trash2Icon } from 'lucide-react'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/api'
 import { AppDialog } from '@/components/shared/AppDialog'
-import { EmptyState, ErrorMessage } from '@/components/shared/EmptyState'
-import { DataCard, EntityCell, NoResults } from '@/components/shared/DataCard'
+import { ErrorMessage } from '@/components/shared/EmptyState'
+import { Dados, EntityCard } from '@/components/shared/EntityCard'
+import { ListaPaginada } from '@/components/shared/ListaPaginada'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { StatCard } from '@/components/shared/StatCard'
+import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { useAuth } from '@/hooks/use-auth'
 import { useConfirm } from '@/hooks/use-confirm'
 import { useRequest } from '@/hooks/use-request'
-import { useSearch } from '@/hooks/use-search'
 import { substituirPorId } from '@/lib/format'
 import { culturasService, empresasService } from '@/services'
 import { nomeCultura, type Cultura } from '@/types/cultura'
@@ -54,16 +48,17 @@ export default function CulturasPage() {
       ])
       return { culturas, empresas }
     },
-    { key: String(admin), errorPrefix: 'Não foi possível carregar as culturas' },
+    {
+      key: String(admin),
+      errorPrefix: 'Não foi possível carregar as culturas',
+      cacheKey: 'pagina-culturas',
+    },
   )
-  const culturas = data?.culturas ?? []
+  const culturas = [...(data?.culturas ?? [])].sort(porNome)
   const empresas = data?.empresas ?? []
 
-  const { query, setQuery, filtrados: filtradas } = useSearch(culturas, (c) => [
-    c.nome,
-    c.variedade,
-    c.empresa?.razao_social,
-  ])
+  const daPlataforma = culturas.filter((c) => c.empresa === null).length
+  const emUso = culturas.filter((c) => c.total_lotes > 0).length
 
   /** Produtor só altera as culturas da própria empresa. */
   const podeAlterar = (c: Cultura) => admin || c.empresa !== null
@@ -75,7 +70,7 @@ export default function CulturasPage() {
   function salva(cultura: Cultura, nova: boolean) {
     setData((atual) => ({
       empresas: atual?.empresas ?? [],
-      culturas: substituirPorId(atual?.culturas ?? [], cultura).sort(porNome),
+      culturas: substituirPorId(atual?.culturas ?? [], cultura),
     }))
     fechar()
     toast.success(nova ? 'Cultura cadastrada.' : 'Alterações salvas.')
@@ -138,99 +133,106 @@ export default function CulturasPage() {
       </AppDialog>
 
       <ErrorMessage message={error} />
-      {loading && <Skeleton className="h-48 w-full" />}
 
-      {!loading && !error && culturas.length === 0 && (
-        <EmptyState>Nenhuma cultura cadastrada ainda.</EmptyState>
-      )}
+      <section aria-label="Resumo" className="grid gap-3 sm:grid-cols-3">
+        <StatCard label="Culturas" value={culturas.length} icon={<SproutIcon />} loading={loading} />
+        <StatCard
+          label="Da plataforma"
+          value={daPlataforma}
+          icon={<LayersIcon />}
+          loading={loading}
+        />
+        <StatCard
+          label="Em uso em lotes"
+          value={emUso}
+          icon={<BuildingIcon />}
+          loading={loading}
+        />
+      </section>
 
-      {culturas.length > 0 && (
-        <DataCard
-          title="Culturas"
-          shown={filtradas.length}
-          total={culturas.length}
-          search={query}
-          onSearchChange={setQuery}
-          searchPlaceholder="Buscar por cultura ou variedade"
-        >
-          {filtradas.length === 0 ? (
-            <NoResults>Nenhuma cultura encontrada para “{query}”.</NoResults>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Cultura</TableHead>
-                  <TableHead className="hidden sm:table-cell">Condições ideais</TableHead>
-                  <TableHead className="text-right">Lotes</TableHead>
-                  <TableHead className="w-24" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtradas.map((cultura) => (
-                  <TableRow key={cultura.id}>
-                    <TableCell>
-                      <EntityCell
-                        icon={<SproutIcon />}
-                        title={cultura.variedade ? `${cultura.nome} — ${cultura.variedade}` : cultura.nome}
-                        subtitle={origem(cultura)}
-                      />
-                    </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      <span className="block text-sm">
-                        {faixa(cultura.temp_recomendada_min, cultura.temp_recomendada_max, '°C')}
-                        {' · '}
-                        {faixa(cultura.umidade_recomendada_min, cultura.umidade_recomendada_max, '%')}
-                      </span>
-                      {cultura.ciclo_medio_dias && (
-                        <span className="text-xs text-muted-foreground">
-                          Ciclo de {cultura.ciclo_medio_dias} dias
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">{cultura.total_lotes}</TableCell>
-                    <TableCell>
-                      {podeAlterar(cultura) ? (
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label={`Editar ${nomeCultura(cultura)}`}
-                            title="Editar"
-                            onClick={() => setDialogo({ modo: 'editar', cultura })}
-                          >
-                            <PencilIcon />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive"
-                            aria-label={`Excluir ${nomeCultura(cultura)}`}
-                            onClick={() => excluir(cultura)}
-                            disabled={cultura.total_lotes > 0}
-                            title={
-                              cultura.total_lotes > 0
-                                ? 'Cultura usada em lotes não pode ser excluída.'
-                                : 'Excluir'
-                            }
-                          >
-                            <Trash2Icon />
-                          </Button>
-                        </div>
-                      ) : (
-                        <span
-                          className="block text-right text-xs text-muted-foreground"
-                          title="Culturas da plataforma são mantidas pelo administrador."
-                        >
-                          Só leitura
-                        </span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+      {loading ? (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} className="h-44" />
+          ))}
+        </div>
+      ) : (
+        <ListaPaginada
+          itens={culturas}
+          campos={(c) => [c.nome, c.variedade, c.empresa?.razao_social]}
+          rotuloBusca="Buscar por cultura, variedade ou empresa"
+          vazio="Nenhuma cultura cadastrada ainda."
+          porPagina={9}
+          listaClassName="grid gap-3 md:grid-cols-2 xl:grid-cols-3"
+          renderItem={(cultura) => (
+            <EntityCard
+              icon={<SproutIcon />}
+              title={nomeCultura(cultura)}
+              subtitle={origem(cultura)}
+              badge={
+                cultura.empresa === null ? (
+                  <StatusBadge tone="primary">Plataforma</StatusBadge>
+                ) : undefined
+              }
+              actions={
+                podeAlterar(cultura) ? (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`Editar ${nomeCultura(cultura)}`}
+                      onClick={() => setDialogo({ modo: 'editar', cultura })}
+                    >
+                      <PencilIcon />
+                      Editar
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive"
+                      aria-label={`Excluir ${nomeCultura(cultura)}`}
+                      onClick={() => excluir(cultura)}
+                      disabled={cultura.total_lotes > 0}
+                      title={
+                        cultura.total_lotes > 0
+                          ? 'Cultura usada em lotes não pode ser excluída.'
+                          : undefined
+                      }
+                    >
+                      <Trash2Icon />
+                      Excluir
+                    </Button>
+                  </>
+                ) : (
+                  <span
+                    className="text-xs text-muted-foreground"
+                    title="Culturas da plataforma são mantidas pelo administrador."
+                  >
+                    Só leitura
+                  </span>
+                )
+              }
+            >
+              <Dados
+                itens={[
+                  ['Temperatura', faixa(cultura.temp_recomendada_min, cultura.temp_recomendada_max, '°C')],
+                  [
+                    'Umidade',
+                    faixa(cultura.umidade_recomendada_min, cultura.umidade_recomendada_max, '%'),
+                  ],
+                  ['Ciclo', cultura.ciclo_medio_dias ? `${cultura.ciclo_medio_dias} dias` : '—'],
+                  [
+                    'Graus-dia',
+                    cultura.graus_dia_ciclo && cultura.temp_base_graus_dia !== null
+                      ? `${cultura.graus_dia_ciclo.toLocaleString('pt-BR')} (base ${cultura.temp_base_graus_dia} °C)`
+                      : '—',
+                  ],
+                  ['Lotes', cultura.total_lotes],
+                ]}
+              />
+            </EntityCard>
           )}
-        </DataCard>
+        />
       )}
     </section>
   )

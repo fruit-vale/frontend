@@ -26,8 +26,12 @@ export const lotesService = {
   listarSafras: (loteId: number, signal?: AbortSignal) =>
     api.get<Safra[]>(ENDPOINTS.lotes.safras(loteId), { signal }),
 
+  /** Também desativa os sensores do lote e os tira dele (as leituras ficam). */
   registrarColheita: (loteId: number, payload: ColheitaPayload) =>
-    api.post<Safra>(ENDPOINTS.lotes.colheita(loteId), payload),
+    api.post<Safra & { sensores_desativados: string[] }>(
+      ENDPOINTS.lotes.colheita(loteId),
+      payload,
+    ),
 
   iniciarSafra: (loteId: number, payload: NovaSafraPayload) =>
     api.post<Safra>(ENDPOINTS.lotes.safras(loteId), payload),

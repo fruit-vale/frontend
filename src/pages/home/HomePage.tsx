@@ -1,36 +1,30 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  CheckIcon,
-  InfoIcon,
-  MinusIcon,
+  BellIcon,
+  CloudSunIcon,
+  CpuIcon,
+  PlusIcon,
+  SlidersHorizontalIcon,
   TriangleAlertIcon,
-  type LucideIcon,
 } from 'lucide-react'
 import { SensorChart } from '@/components/charts/SensorChart'
 import { SensorDataDialog } from '@/components/charts/SensorDataDialog'
-import { EmptyState, ErrorMessage, Hint } from '@/components/shared/EmptyState'
-import { PageHeader, SectionHeader } from '@/components/shared/PageHeader'
+import { ErrorMessage, Hint } from '@/components/shared/EmptyState'
+import { SectionHeader } from '@/components/shared/PageHeader'
 import { SelectField } from '@/components/shared/SelectField'
-import { StatusBadge, type Tone } from '@/components/shared/StatusBadge'
 import { PrimeirosPassos } from '@/components/onboarding/PrimeirosPassos'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
 import { ROUTES } from '@/config/routes'
 import { useAuth } from '@/hooks/use-auth'
 import { useRequest } from '@/hooks/use-request'
-import { formatarData, formatarNumero, plural } from '@/lib/format'
+import { formatarData, plural } from '@/lib/format'
 import { lotesService, painelService } from '@/services'
-import type { StatusCultivo } from '@/types/painel'
 import { TIPO_MEDIDA_LABELS, type TipoMedida } from '@/types/sensor'
-
-// status sempre com ícone + texto, nunca só a cor
-const STATUS: Record<StatusCultivo, { rotulo: string; icone: LucideIcon; tom: Tone }> = {
-  normal: { rotulo: 'Normal', icone: CheckIcon, tom: 'success' },
-  atencao: { rotulo: 'Atenção', icone: TriangleAlertIcon, tom: 'warning' },
-  sem_dados: { rotulo: 'Sem leituras recentes', icone: MinusIcon, tom: 'neutral' },
-  sem_faixa: { rotulo: 'Sem faixa ideal', icone: InfoIcon, tom: 'primary' },
-}
+import { EmpresaMapa, EmpresaPainel } from './EmpresaPainel'
+import { EstruturaCard } from './EstruturaCard'
+import { GraficoVazio } from './GraficoVazio'
 
 const PERIODOS = [
   { dias: 1, rotulo: 'Últimas 24 horas' },
@@ -38,44 +32,11 @@ const PERIODOS = [
   { dias: 30, rotulo: 'Últimos 30 dias' },
 ]
 
-const EMOJIS: [RegExp, string][] = [
-  [/uva/i, '🍇'],
-  [/manga/i, '🥭'],
-  [/melancia/i, '🍉'],
-  [/mel[aã]o/i, '🍈'],
-  [/banana/i, '🍌'],
-  [/coco/i, '🥥'],
-  [/lim[aã]o/i, '🍋'],
-  [/acerola|cereja/i, '🍒'],
-  [/tomate/i, '🍅'],
-]
-const emoji = (nome: string) => EMOJIS.find(([re]) => re.test(nome))?.[1] ?? '🌱'
-
 function quando(dias: number) {
   if (dias < 0) return `atrasada há ${-dias} ${plural(-dias, 'dia', 'dias')}`
   if (dias === 0) return 'prevista para hoje'
   if (dias === 1) return 'prevista para amanhã'
   return `em ${dias} dias`
-}
-
-function Numero({
-  rotulo,
-  valor,
-  detalhe,
-}: {
-  rotulo: string
-  valor: React.ReactNode
-  detalhe?: string
-}) {
-  return (
-    <Card size="sm">
-      <CardContent className="flex flex-col gap-0.5">
-        <span className="text-xs text-muted-foreground">{rotulo}</span>
-        <strong className="text-3xl font-semibold">{valor}</strong>
-        {detalhe && <small className="text-xs text-muted-foreground">{detalhe}</small>}
-      </CardContent>
-    </Card>
-  )
 }
 
 export default function HomePage() {
@@ -85,10 +46,11 @@ export default function HomePage() {
   const [tabelaAberta, setTabelaAberta] = useState(false)
   const [propriedadeId, setPropriedadeId] = useState('todas')
   const [loteId, setLoteId] = useState('todos')
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false)
 
   const { data: painel, error, loading } = useRequest(
     (signal) => painelService.obter(signal),
-    { errorPrefix: 'Não foi possível carregar o painel' },
+    { errorPrefix: 'Não foi possível carregar o painel', cacheKey: 'home-painel' },
   )
 
   // começa pela temperatura, se algum sensor mede
@@ -101,13 +63,23 @@ export default function HomePage() {
         : (tipos[0] ?? null)
 
   // lotes do usuário alimentam os filtros de propriedade e lote
-  const { data: lotes = [] } = useRequest((signal) => lotesService.listar(signal))
+  const { data: todosLotes = [] } = useRequest((signal) => lotesService.listar(signal), {
+    cacheKey: 'lotes',
+  })
+  // só o administrador vê várias empresas; os demais, apenas a própria
+  const lotes =
+    user?.role === 'administrador'
+      ? todosLotes
+      : todosLotes.filter((l) => l.empresa.id === user?.empresa?.id)
   const propriedades = [
     ...new Map(lotes.map((l) => [l.propriedade.id, l.propriedade])).values(),
   ].sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
   const lotesDaPropriedade = lotes
     .filter((l) => propriedadeId === 'todas' || l.propriedade.id === Number(propriedadeId))
     .sort((a, b) => a.nome_identificacao.localeCompare(b.nome_identificacao, 'pt-BR'))
+  // quantos filtros fogem do padrão (aparece no botão enquanto ocultos)
+  const filtrosAtivos =
+    Number(propriedadeId !== 'todas') + Number(loteId !== 'todos') + Number(dias !== 7)
   const filtro = {
     propriedadeId: propriedadeId === 'todas' ? undefined : Number(propriedadeId),
     loteId: loteId === 'todos' ? undefined : Number(loteId),
@@ -123,189 +95,152 @@ export default function HomePage() {
       key: `${tipo}-${dias}-${propriedadeId}-${loteId}`,
       enabled: tipo !== null,
       errorPrefix: 'Não foi possível carregar as leituras',
+      cacheKey: 'home-serie',
     },
   )
 
   if (!user) return null
   const gestor = user.role === 'administrador' || user.role === 'produtor'
-  const r = painel?.resumo
   const periodo = PERIODOS.find((p) => p.dias === dias)?.rotulo.toLowerCase() ?? ''
+  const semSensor = !painel || painel.tipos.length === 0
+  const alertas = painel?.alertas ?? { nao_lidos: 0, recentes: [] }
+  const acoes = (
+    <>
+        {gestor && (
+          <Link to={ROUTES.cultivos} className={buttonVariants({ size: 'lg' })}>
+            <PlusIcon />
+            Novo lote
+          </Link>
+        )}
+        <Link to={ROUTES.previsao} className={buttonVariants({ variant: 'outline', size: 'lg' })}>
+          <CloudSunIcon />
+          Previsão do tempo
+        </Link>
+
+    </>
+  )
 
   return (
     <section className="space-y-8">
-      <PageHeader
-        eyebrow="Visão geral"
-        title={`Olá, ${user.nome.split(' ')[0]}!`}
-        description={
-          user.role === 'administrador'
-            ? 'Acompanhe as plantações de todas as empresas.'
-            : `Acompanhe as plantações de ${user.empresa?.razao_social ?? 'sua empresa'}.`
-        }
-      />
-
-      {/* guia de configuração: só o administrador cadastra empresas e propriedades */}
-      {user.role === 'administrador' && <PrimeirosPassos />}
-
       <ErrorMessage message={error} />
 
-      {loading && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-24" />
-          ))}
-        </div>
+      {user.role === 'administrador' ? (
+        <>
+          {/* guia de configuração: só o administrador cadastra empresas e propriedades */}
+          <PrimeirosPassos acoes={acoes} />
+          <section aria-label="Resumo" className="grid gap-3 sm:grid-cols-2">
+            <EstruturaCard lotes={lotes} />
+          </section>
+        </>
+      ) : (
+        // produtor e analista: só a própria empresa
+        <EmpresaPainel
+          empresa={user.empresa?.razao_social ?? 'Sem empresa vinculada'}
+          painel={painel ?? null}
+          loading={loading}
+          acoes={acoes}
+        />
       )}
 
-      {r && (
-        <section aria-label="Resumo" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Numero rotulo="Propriedades ativas" valor={r.propriedades} />
-          <Numero
-            rotulo="Lotes em cultivo"
-            valor={r.lotes_em_cultivo}
-            detalhe={`${formatarNumero(r.area_em_cultivo_ha)} ha`}
-          />
-          <Numero
-            rotulo="Sensores ativos"
-            valor={r.sensores_ativos}
-            detalhe={`de ${r.sensores_total} ${plural(r.sensores_total, 'cadastrado', 'cadastrados')}`}
-          />
-          <Numero rotulo="Leituras nas últimas 24 h" valor={r.leituras_24h.toLocaleString('pt-BR')} />
-        </section>
-      )}
-
-      {painel && (
-        <section className="space-y-3">
-          <SectionHeader
-            eyebrow="Cultivos"
-            title="Culturas em cultivo"
-            description="Situação pela leitura mais recente dos sensores, comparada à faixa ideal da cultura."
-          />
-
-          {painel.culturas.length === 0 ? (
-            <EmptyState>
-              Nenhum lote em cultivo.{' '}
-              {gestor && (
-                <Link to={ROUTES.cultivos} className="text-primary underline">
-                  Cadastre um lote em Cultivos e Lotes.
-                </Link>
-              )}
-            </EmptyState>
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {painel.culturas.map((c) => {
-                const status = STATUS[c.status]
-                return (
-                  <Card key={c.cultura.id} size="sm">
-                    <CardContent className="flex items-start gap-3">
-                      <span
-                        className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-secondary text-2xl"
-                        aria-hidden="true"
-                      >
-                        {emoji(c.cultura.nome)}
-                      </span>
-                      <div className="min-w-0 flex-1 space-y-0.5">
-                        <strong className="block">
-                          {c.cultura.nome}
-                          {c.cultura.variedade && (
-                            <span className="font-normal text-muted-foreground">
-                              {' '}
-                              — {c.cultura.variedade}
-                            </span>
-                          )}
-                        </strong>
-                        <small className="block text-xs text-muted-foreground">
-                          {c.lotes} {plural(c.lotes, 'lote', 'lotes')}
-                          {c.area_ha > 0 && ` · ${formatarNumero(c.area_ha)} ha`}
-                        </small>
-                        {c.motivo && (
-                          <p className="pt-1 text-xs text-muted-foreground">{c.motivo}</p>
-                        )}
-                      </div>
-                      <StatusBadge tone={status.tom} className="h-auto shrink-0 py-0.5">
-                        <status.icone />
-                        {status.rotulo}
-                      </StatusBadge>
-                    </CardContent>
-                  </Card>
-                )
-              })}
-            </div>
-          )}
-        </section>
-      )}
-
-      {painel && (
-        <section className="space-y-3">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <section className="min-w-0 space-y-3">
           <SectionHeader
             eyebrow="Monitoramento"
             title="Comportamento dos sensores"
             description={`Média ${serie?.intervalo === 'day' ? 'diária' : 'por hora'} de cada sensor.`}
             actions={
+              painel &&
               painel.tipos.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  <SelectField
-                    aria-label="Dado"
-                    value={tipo ?? ''}
-                    onValueChange={(v) => setTipoEscolhido(v as TipoMedida)}
-                    options={painel.tipos.map((t) => ({
-                      value: t.tipo,
-                      label: TIPO_MEDIDA_LABELS[t.tipo],
-                    }))}
-                    className="w-44"
-                  />
-                  {propriedades.length > 0 && (
-                    <>
-                      <SelectField
-                        aria-label="Propriedade"
-                        value={propriedadeId}
-                        onValueChange={(v) => {
-                          setPropriedadeId(v)
-                          setLoteId('todos') // o lote escolhido pode ser de outra propriedade
-                        }}
-                        options={[
-                          { value: 'todas', label: 'Todas as propriedades' },
-                          ...propriedades.map((p) => ({ value: String(p.id), label: p.nome })),
-                        ]}
-                        className="w-52"
-                      />
-                      <SelectField
-                        aria-label="Lote"
-                        value={loteId}
-                        onValueChange={setLoteId}
-                        options={[
-                          { value: 'todos', label: 'Todos os lotes' },
-                          ...lotesDaPropriedade.map((l) => ({
-                            value: String(l.id),
-                            label: l.nome_identificacao,
-                          })),
-                        ]}
-                        className="w-44"
-                      />
-                    </>
+                <Button
+                  type="button"
+                  variant="outline"
+                  aria-expanded={filtrosAbertos}
+                  onClick={() => setFiltrosAbertos((v) => !v)}
+                >
+                  <SlidersHorizontalIcon />
+                  {filtrosAbertos ? 'Ocultar filtros' : 'Filtros'}
+                  {filtrosAtivos > 0 && !filtrosAbertos && (
+                    <span className="flex size-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                      {filtrosAtivos}
+                    </span>
                   )}
-                  <SelectField
-                    aria-label="Período"
-                    value={String(dias)}
-                    onValueChange={(v) => setDias(Number(v))}
-                    options={PERIODOS.map((p) => ({ value: String(p.dias), label: p.rotulo }))}
-                    className="w-48"
-                  />
-                </div>
+                </Button>
               )
             }
           />
 
+          {filtrosAbertos && painel && painel.tipos.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              <SelectField
+                aria-label="Dado"
+                value={tipo ?? ''}
+                onValueChange={(v) => setTipoEscolhido(v as TipoMedida)}
+                options={painel.tipos.map((t) => ({
+                  value: t.tipo,
+                  label: TIPO_MEDIDA_LABELS[t.tipo],
+                }))}
+                className="w-44"
+              />
+              {propriedades.length > 0 && (
+                <>
+                  <SelectField
+                    aria-label="Propriedade"
+                    value={propriedadeId}
+                    onValueChange={(v) => {
+                      setPropriedadeId(v)
+                      setLoteId('todos') // o lote escolhido pode ser de outra propriedade
+                    }}
+                    options={[
+                      { value: 'todas', label: 'Todas as propriedades' },
+                      ...propriedades.map((p) => ({ value: String(p.id), label: p.nome })),
+                    ]}
+                    className="w-52"
+                  />
+                  <SelectField
+                    aria-label="Lote"
+                    value={loteId}
+                    onValueChange={setLoteId}
+                    options={[
+                      { value: 'todos', label: 'Todos os lotes' },
+                      ...lotesDaPropriedade.map((l) => ({
+                        value: String(l.id),
+                        label: l.nome_identificacao,
+                      })),
+                    ]}
+                    className="w-44"
+                  />
+                </>
+              )}
+              <SelectField
+                aria-label="Período"
+                value={String(dias)}
+                onValueChange={(v) => setDias(Number(v))}
+                options={PERIODOS.map((p) => ({ value: String(p.dias), label: p.rotulo }))}
+                className="w-48"
+              />
+            </div>
+          )}
+
           <Card>
             <CardContent>
-              {painel.tipos.length === 0 ? (
-                <EmptyState>
-                  Nenhum sensor com dados configurados ainda.{' '}
+              {loading ? (
+                <Hint>Carregando painel...</Hint>
+              ) : semSensor ? (
+                <GraficoVazio>
+                  <div className="space-y-1">
+                    <h3 className="font-semibold">Seus sensores vão aparecer aqui</h3>
+                    <p className="max-w-sm text-sm text-muted-foreground">
+                      Assim que um sensor enviar a primeira leitura, o gráfico mostra temperatura,
+                      umidade e outros dados em tempo real.
+                    </p>
+                  </div>
                   {gestor && (
-                    <Link to={ROUTES.sensores} className="text-primary underline">
-                      Cadastre um sensor em Sensores.
+                    <Link to={ROUTES.sensores} className={buttonVariants()}>
+                      <CpuIcon />
+                      Cadastrar um sensor
                     </Link>
                   )}
-                </EmptyState>
+                </GraficoVazio>
               ) : erroSerie ? (
                 <ErrorMessage message={erroSerie} />
               ) : carregandoSerie || !serie ? (
@@ -315,6 +250,7 @@ export default function HomePage() {
                   series={serie.series}
                   unidade={serie.unidade}
                   intervalo={serie.intervalo}
+                  dias={dias}
                   titulo={tipo ? TIPO_MEDIDA_LABELS[tipo] : ''}
                   onVerDados={() => setTabelaAberta(true)}
                 />
@@ -335,34 +271,37 @@ export default function HomePage() {
             />
           )}
         </section>
-      )}
 
-      {painel && (
-        <section className="grid gap-3 md:grid-cols-2">
+        <aside className="min-w-0 space-y-3">
           <Card>
             <CardContent className="flex gap-3">
-              <span className="text-3xl" aria-hidden="true">
-                {painel.alertas.nao_lidos ? '⚠️' : '✅'}
+              <span
+                className={`flex size-10 shrink-0 items-center justify-center rounded-lg [&_svg]:size-5 ${
+                  alertas.nao_lidos ? 'bg-warning-soft text-warning' : 'bg-success-soft text-success'
+                }`}
+                aria-hidden="true"
+              >
+                {alertas.nao_lidos ? <TriangleAlertIcon /> : <BellIcon />}
               </span>
-              <div className="min-w-0 space-y-1">
+              <div className="min-w-0 flex-1 space-y-1">
                 <span className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
                   Alertas
                 </span>
-                {painel.alertas.nao_lidos === 0 ? (
+                {alertas.nao_lidos === 0 ? (
                   <>
-                    <h3 className="font-semibold">Nenhum alerta não lido</h3>
+                    <h3 className="font-semibold">Tudo tranquilo por aqui</h3>
                     <p className="text-sm text-muted-foreground">
-                      Os alertas climáticos dos lotes aparecem aqui.
+                      Nenhum alerta não lido. Os alertas climáticos dos lotes aparecem aqui.
                     </p>
                   </>
                 ) : (
                   <>
                     <h3 className="font-semibold">
-                      {painel.alertas.nao_lidos}{' '}
-                      {plural(painel.alertas.nao_lidos, 'alerta não lido', 'alertas não lidos')}
+                      {alertas.nao_lidos}{' '}
+                      {plural(alertas.nao_lidos, 'alerta não lido', 'alertas não lidos')}
                     </h3>
                     <ul className="space-y-1 text-sm text-muted-foreground">
-                      {painel.alertas.recentes.map((a) => (
+                      {alertas.recentes.map((a) => (
                         <li key={a.id}>
                           <strong className="text-foreground">{a.lote}:</strong> {a.mensagem}
                         </li>
@@ -370,20 +309,29 @@ export default function HomePage() {
                     </ul>
                   </>
                 )}
+                <Link
+                  to={ROUTES.leiturasAlertas}
+                  className="inline-block pt-1 text-sm text-primary underline"
+                >
+                  Ver leituras e alertas
+                </Link>
               </div>
             </CardContent>
           </Card>
 
           <Card>
             <CardContent className="flex gap-3">
-              <span className="text-3xl" aria-hidden="true">
+              <span
+                className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-secondary text-xl"
+                aria-hidden="true"
+              >
                 🌾
               </span>
               <div className="min-w-0 space-y-1">
                 <span className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
                   Próxima colheita
                 </span>
-                {painel.proxima_colheita ? (
+                {painel?.proxima_colheita ? (
                   <>
                     <h3 className="font-semibold">
                       {painel.proxima_colheita.cultura.nome} • {painel.proxima_colheita.lote.nome}
@@ -403,15 +351,17 @@ export default function HomePage() {
                   <>
                     <h3 className="font-semibold">Sem previsão</h3>
                     <p className="text-sm text-muted-foreground">
-                      Nenhum lote em cultivo tem previsão de colheita.
+                      Informe a data prevista ao cadastrar um lote para acompanhar a colheita.
                     </p>
                   </>
                 )}
               </div>
             </CardContent>
           </Card>
-        </section>
-      )}
+        </aside>
+      </div>
+
+      {user.role !== 'administrador' && <EmpresaMapa lotes={lotes} />}
     </section>
   )
 }

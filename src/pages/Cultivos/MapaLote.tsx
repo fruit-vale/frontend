@@ -7,7 +7,7 @@ import { areaPoligonoHa, centroPoligono, perimetroM } from '@/lib/geo'
 import type { ImagemDisponivel } from '@/services/nasa.service'
 import type { Lote } from '@/types/lote'
 
-/** Visualização do lote sobre a imagem da NASA, com escolha da data. */
+/** Visualização do lote sobre a imagem de satélite (Google ou NASA por data). */
 export function MapaLote({ lote, lotes }: { lote: Lote; lotes: Lote[] }) {
   const [imagem, setImagem] = useState<ImagemDisponivel | null>(null)
   const [referencias, setReferencias] = useState(true)

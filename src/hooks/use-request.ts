@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getErrorMessage, isCancelled } from '@/api'
+import { gravarCache, lerCache } from '@/lib/request-cache'
 
 type Estado<T> = { key: string | null; data: T | undefined; error: string }
 
@@ -10,6 +11,11 @@ type Options = {
   enabled?: boolean
   /** Prefixo da mensagem de erro, ex.: "Não foi possível carregar os lotes". */
   errorPrefix?: string
+  /**
+   * Guarda a resposta: ao voltar para a tela ela aparece na hora e é
+   * atualizada em segundo plano, sem tela de carregamento.
+   */
+  cacheKey?: string
 }
 
 /**
@@ -18,7 +24,7 @@ type Options = {
  */
 export function useRequest<T>(
   fetcher: (signal: AbortSignal) => Promise<T>,
-  { key = 0, enabled = true, errorPrefix }: Options = {},
+  { key = 0, enabled = true, errorPrefix, cacheKey }: Options = {},
 ) {
   const fetcherRef = useRef(fetcher)
   useEffect(() => {
@@ -27,10 +33,12 @@ export function useRequest<T>(
 
   const [nonce, setNonce] = useState(0)
   const requestKey = `${key}:${nonce}`
-  const [estado, setEstado] = useState<Estado<T>>({
-    key: null,
-    data: undefined,
-    error: '',
+  const chaveCache = cacheKey ? `${cacheKey}:${key}` : null
+  const [estado, setEstado] = useState<Estado<T>>(() => {
+    const guardado = chaveCache ? lerCache<T>(chaveCache) : undefined
+    return guardado === undefined
+      ? { key: null, data: undefined, error: '' }
+      : { key: requestKey, data: guardado, error: '' }
   })
 
   useEffect(() => {
@@ -38,7 +46,10 @@ export function useRequest<T>(
     const controller = new AbortController()
 
     fetcherRef.current(controller.signal).then(
-      (data) => setEstado({ key: requestKey, data, error: '' }),
+      (data) => {
+        if (chaveCache) gravarCache(chaveCache, data)
+        setEstado({ key: requestKey, data, error: '' })
+      },
       (error) => {
         if (isCancelled(error)) return
         const detalhe = getErrorMessage(error)
@@ -51,7 +62,7 @@ export function useRequest<T>(
     )
 
     return () => controller.abort()
-  }, [requestKey, enabled, errorPrefix])
+  }, [requestKey, enabled, errorPrefix, chaveCache])
 
   const reload = useCallback(() => setNonce((n) => n + 1), [])
 

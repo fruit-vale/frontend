@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent } from 'react'
 import { TableIcon } from 'lucide-react'
-import { EmptyState, Hint } from '@/components/shared/EmptyState'
+import { Hint } from '@/components/shared/EmptyState'
 import { Button } from '@/components/ui/button'
 import type { IntervaloSerie, Serie } from '@/types/painel'
 
@@ -12,6 +12,8 @@ type Props = {
   intervalo: IntervaloSerie
   /** nome do dado, para o título acessível (ex.: "Temperatura") */
   titulo: string
+  /** tamanho da janela, em dias: define o eixo do tempo quando não há leituras */
+  dias?: number
   /** abre a visão em tabela (leituras e médias) */
   onVerDados?: () => void
 }
@@ -53,11 +55,12 @@ function escalaY(min: number, max: number) {
 }
 
 /** Gráfico de linhas, uma por sensor, com linha-guia + dica ao passar o mouse. */
-export function SensorChart({ series: todas, unidade, intervalo, titulo, onVerDados }: Props) {
+export function SensorChart({ series: todas, unidade, intervalo, titulo, dias, onVerDados }: Props) {
   const series = useMemo(() => todas.slice(0, MAX_SERIES), [todas])
   const caixa = useRef<HTMLDivElement>(null)
   const [largura, setLargura] = useState(0)
   const [foco, setFoco] = useState<number | null>(null)
+  const [agora] = useState(() => Date.now())
 
   // largura real do contêiner: o texto do SVG fica nítido, sem esticar
   useEffect(() => {
@@ -68,7 +71,7 @@ export function SensorChart({ series: todas, unidade, intervalo, titulo, onVerDa
     return () => obs.disconnect()
   }, [])
 
-  const dados = useMemo(() => {
+  const dadosReais = useMemo(() => {
     const instantes = [...new Set(series.flatMap((s) => s.pontos.map((p) => p.instante)))].sort()
     if (!instantes.length) return null
     const valores = series.flatMap((s) => s.pontos.map((p) => p.valor))
@@ -80,7 +83,14 @@ export function SensorChart({ series: todas, unidade, intervalo, titulo, onVerDa
     }
   }, [series])
 
-  if (!dados) return <EmptyState>Sem leituras neste período.</EmptyState>
+  // sem leituras: eixos vazios, terminando no horário atual
+  const vazio = !dadosReais
+  const dados = dadosReais ?? {
+    instantes: [] as string[],
+    tempos: [agora - (dias ?? (intervalo === 'hour' ? 1 : 7)) * DIA, agora],
+    y: escalaY(0, 100),
+    porSerie: [] as Map<string, number>[],
+  }
 
   const t0 = dados.tempos[0]
   const t1 = dados.tempos[dados.tempos.length - 1]
@@ -176,7 +186,11 @@ export function SensorChart({ series: todas, unidade, intervalo, titulo, onVerDa
             height={ALTURA}
             className="block overflow-visible"
             role="img"
-            aria-label={`${titulo} de ${series.length} sensor(es), de ${fmtInstante(dados.instantes[0])} a ${fmtInstante(dados.instantes[dados.instantes.length - 1])}. Os valores estão em "Ver dados em tabela".`}
+            aria-label={
+              vazio
+                ? `${titulo}: sem leituras neste período.`
+                : `${titulo} de ${series.length} sensor(es), de ${fmtInstante(dados.instantes[0])} a ${fmtInstante(dados.instantes[dados.instantes.length - 1])}. Os valores estão em "Ver dados em tabela".`
+            }
           >
             {dados.y.marcas.map((v) => (
               <g key={v}>
@@ -288,18 +302,20 @@ export function SensorChart({ series: todas, unidade, intervalo, titulo, onVerDa
             )}
 
             {/* área de captura do tamanho do gráfico: hover e toque fáceis */}
-            <rect
-              className="cursor-crosshair"
-              fill="transparent"
-              style={{ touchAction: 'pan-y' }}
-              x={MARGEM.esquerda}
-              y={MARGEM.topo}
-              width={plotW}
-              height={plotH}
-              onPointerMove={mover}
-              onPointerDown={mover}
-              onPointerLeave={() => setFoco(null)}
-            />
+            {!vazio && (
+              <rect
+                className="cursor-crosshair"
+                fill="transparent"
+                style={{ touchAction: 'pan-y' }}
+                x={MARGEM.esquerda}
+                y={MARGEM.topo}
+                width={plotW}
+                height={plotH}
+                onPointerMove={mover}
+                onPointerDown={mover}
+                onPointerLeave={() => setFoco(null)}
+              />
+            )}
           </svg>
         )}
 

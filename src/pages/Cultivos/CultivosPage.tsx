@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import {
+  CpuIcon,
   HistoryIcon,
+  LayersIcon,
+  RulerIcon,
   MapIcon,
   PencilIcon,
   PlusIcon,
@@ -11,16 +14,19 @@ import { toast } from 'sonner'
 import { getErrorMessage } from '@/api'
 import { AppDialog } from '@/components/shared/AppDialog'
 import { EmptyState, ErrorMessage } from '@/components/shared/EmptyState'
+import { Dados, EntityCard } from '@/components/shared/EntityCard'
+import { ListaPaginada } from '@/components/shared/ListaPaginada'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { SelectField } from '@/components/shared/SelectField'
+import { StatCard } from '@/components/shared/StatCard'
 import { StatusBadge, type Tone } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/hooks/use-auth'
 import { useConfirm } from '@/hooks/use-confirm'
 import { useRequest } from '@/hooks/use-request'
-import { formatarData, formatarHectares, substituirPorId } from '@/lib/format'
+import { formatarData, formatarHectares, formatarNumero, substituirPorId } from '@/lib/format'
 import { culturasService, lotesService, propriedadesService } from '@/services'
 import { nomeCultura, type CulturaResumo } from '@/types/cultura'
 import { SITUACAO_LABELS, type Lote, type SituacaoLote } from '@/types/lote'
@@ -62,6 +68,7 @@ export default function CultivosPage() {
 
   const [dialogo, setDialogo] = useState<Dialogo>({ tipo: 'fechado' })
   const [visao, setVisao] = useState<Visao>('lista')
+  const [situacao, setSituacao] = useState('todas')
 
   const { data, error, loading, setData } = useRequest<Dados>(
     async (signal) => {
@@ -72,11 +79,20 @@ export default function CultivosPage() {
       ])
       return { lotes, propriedades, culturas }
     },
-    { key: String(podeEditar), errorPrefix: 'Não foi possível carregar os lotes' },
+    {
+      key: String(podeEditar),
+      errorPrefix: 'Não foi possível carregar os lotes',
+      cacheKey: 'pagina-cultivos',
+    },
   )
   const lotes = data?.lotes ?? []
   const propriedades = data?.propriedades ?? []
   const culturas = data?.culturas ?? []
+
+  const visiveis = lotes.filter((l) => situacao === 'todas' || l.situacao === situacao)
+  const emCultivo = lotes.filter((l) => l.situacao === 'EM_CULTIVO').length
+  const area = lotes.reduce((soma, l) => soma + (l.area_ha ?? 0), 0)
+  const sensores = lotes.reduce((soma, l) => soma + l.total_sensores, 0)
 
   const fechar = () => setDialogo({ tipo: 'fechado' })
 
@@ -157,7 +173,7 @@ export default function CultivosPage() {
         open={dialogo.tipo !== 'fechado'}
         onClose={fechar}
         title={titulo}
-        size="xl"
+        size={dialogo.tipo === 'historico' ? 'lg' : 'xl'}
       >
         {(dialogo.tipo === 'novo' || dialogo.tipo === 'editar') && (
           <LoteForm
@@ -187,6 +203,18 @@ export default function CultivosPage() {
 
       <ErrorMessage message={error} />
 
+      <section aria-label="Resumo" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Lotes" value={lotes.length} icon={<LayersIcon />} loading={loading} />
+        <StatCard label="Em cultivo" value={emCultivo} icon={<SproutIcon />} loading={loading} />
+        <StatCard
+          label="Área cadastrada"
+          value={`${formatarNumero(area)} ha`}
+          icon={<RulerIcon />}
+          loading={loading}
+        />
+        <StatCard label="Sensores" value={sensores} icon={<CpuIcon />} loading={loading} />
+      </section>
+
       {loading && (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {[0, 1, 2].map((i) => (
@@ -213,39 +241,48 @@ export default function CultivosPage() {
       )}
 
       {lotes.length > 0 && visao === 'lista' && (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {lotes.map((lote) => (
-            <Card key={lote.id}>
-              <CardContent className="flex flex-1 flex-col gap-3">
-                <div className="flex items-start justify-between gap-2">
-                  <span
-                    className="flex size-10 items-center justify-center rounded-lg bg-secondary text-secondary-foreground"
-                    aria-hidden="true"
-                  >
-                    <SproutIcon className="size-5" />
-                  </span>
-                  <StatusBadge tone={SITUACAO_TONE[lote.situacao]}>
-                    {SITUACAO_LABELS[lote.situacao]}
-                  </StatusBadge>
-                </div>
-
-                <div className="space-y-1">
-                  <h2 className="text-lg font-semibold">{lote.nome_identificacao}</h2>
-                  <p className="text-sm text-muted-foreground">
-                    {nomeCultura(lote.cultura)} · {lote.propriedade.nome}
-                    {user?.role === 'administrador' && ` · ${lote.empresa.razao_social}`}
-                  </p>
-                </div>
-
-                <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                  <Dado rotulo="Área" valor={formatarHectares(lote.area_ha)} />
-                  <Dado rotulo="Plantio" valor={formatarData(lote.data_plantio)} />
-                  <Dado rotulo="Colheita prevista" valor={formatarData(lote.previsao_colheita)} />
-                  <Dado rotulo="Sensores" valor={lote.total_sensores} />
-                  <Dado rotulo="Safras" valor={lote.total_safras} />
-                </dl>
-
-                <div className="mt-auto flex flex-wrap gap-1 border-t pt-3">
+        <ListaPaginada
+          itens={visiveis}
+          campos={(l) => [
+            l.nome_identificacao,
+            l.cultura.nome,
+            l.cultura.variedade,
+            l.propriedade.nome,
+            l.empresa.razao_social,
+          ]}
+          rotuloBusca="Buscar por lote, cultura ou propriedade"
+          vazio="Nenhum lote encontrado."
+          porPagina={9}
+          listaClassName="grid gap-3 md:grid-cols-2 xl:grid-cols-3"
+          filtros={
+            <SelectField
+              aria-label="Filtrar por situação"
+              value={situacao}
+              onValueChange={setSituacao}
+              options={[
+                { value: 'todas', label: 'Todas as situações' },
+                ...(Object.keys(SITUACAO_LABELS) as SituacaoLote[]).map((s) => ({
+                  value: s,
+                  label: SITUACAO_LABELS[s],
+                })),
+              ]}
+              className="h-9 w-48"
+            />
+          }
+          renderItem={(lote) => (
+            <EntityCard
+              icon={<SproutIcon />}
+              title={lote.nome_identificacao}
+              subtitle={`${nomeCultura(lote.cultura)} · ${lote.propriedade.nome}${
+                user?.role === 'administrador' ? ` · ${lote.empresa.razao_social}` : ''
+              }`}
+              badge={
+                <StatusBadge tone={SITUACAO_TONE[lote.situacao]}>
+                  {SITUACAO_LABELS[lote.situacao]}
+                </StatusBadge>
+              }
+              actions={
+                <>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -289,21 +326,22 @@ export default function CultivosPage() {
                       </Button>
                     </>
                   )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                </>
+              }
+            >
+              <Dados
+                itens={[
+                  ['Área', formatarHectares(lote.area_ha)],
+                  ['Plantio', formatarData(lote.data_plantio)],
+                  ['Colheita prevista', formatarData(lote.previsao_colheita)],
+                  ['Sensores', lote.total_sensores],
+                  ['Safras', lote.total_safras],
+                ]}
+              />
+            </EntityCard>
+          )}
+        />
       )}
     </section>
-  )
-}
-
-function Dado({ rotulo, valor }: { rotulo: string; valor: React.ReactNode }) {
-  return (
-    <div>
-      <dt className="text-xs text-muted-foreground">{rotulo}</dt>
-      <dd className="font-medium">{valor}</dd>
-    </div>
   )
 }

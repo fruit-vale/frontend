@@ -6,12 +6,12 @@ import { SeletorImagem } from './SeletorImagem'
 type Props = {
   centro: { lat: number; lng: number } | null
   imagem: ImagemDisponivel | null
-  onImagemChange: (imagem: ImagemDisponivel) => void
+  onImagemChange: (imagem: ImagemDisponivel | null) => void
   referencias: boolean
   onReferenciasChange: (ativas: boolean) => void
 }
 
-/** Opção "Estradas e limites" + miniaturas das datas disponíveis da NASA. */
+/** Opção "Estradas e limites" + escolha da imagem (Google ou uma data da NASA). */
 export function ImageryControls({
   centro,
   imagem,

@@ -22,6 +22,10 @@ export const sensoresService = {
   atualizarMedidas: (id: number, medidas: MedidaPayload[]) =>
     api.patch<Sensor>(ENDPOINTS.sensores.medidas(id), { medidas }),
 
+  /** Leva o sensor para outro lote da mesma empresa. */
+  moverParaLote: (id: number, loteId: number) =>
+    api.patch<Sensor>(ENDPOINTS.sensores.lote(id), { lote_id: loteId }),
+
   gerarSenha: (id: number) =>
     api.post<Credenciais>(ENDPOINTS.sensores.senha(id)),
 

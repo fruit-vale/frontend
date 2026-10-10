@@ -1,3 +1,5 @@
+import { limparCache } from '@/lib/request-cache'
+
 const TOKEN_KEY = 'fruitvale:token'
 
 export function getToken() {
@@ -13,6 +15,7 @@ export function getToken() {
  * aba. Passe `null` para limpar.
  */
 export function setToken(token: string | null, lembrar = true) {
+  limparCache()
   try {
     localStorage.removeItem(TOKEN_KEY)
     sessionStorage.removeItem(TOKEN_KEY)

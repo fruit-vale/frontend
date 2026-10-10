@@ -26,6 +26,7 @@ import type { ImagemDisponivel } from '@/services/nasa.service'
 import { nomeCultura, type CulturaResumo } from '@/types/cultura'
 import { SITUACAO_LABELS, type Lote, type SituacaoLote } from '@/types/lote'
 import type { Propriedade } from '@/types/propriedade'
+import { googleDisponivel } from '@/services/google-tiles.service'
 
 /** desenhar: contorno livre no mapa; gps: retângulo por 2 cantos + profundidade */
 type Modo = 'desenhar' | 'gps'
@@ -411,7 +412,9 @@ export function LoteForm({ propriedades, culturas, lotes, lote, onSalvo, onCance
         />
         <Hint>
           {vizinhos.length > 0 && 'Os outros lotes da propriedade aparecem tracejados. '}
-          As imagens são da NASA (30 m por pixel), por isso aparecem pixeladas em zoom alto.
+          {googleDisponivel
+            ? 'Aproxime bem o mapa para marcar os cantos com precisão. As imagens da NASA, abaixo, mostram datas recentes, mas em baixa resolução (30 m por pixel).'
+            : 'As imagens são da NASA (30 m por pixel), por isso aparecem pixeladas em zoom alto.'}
         </Hint>
         <ImageryControls
           centro={centroMapa}

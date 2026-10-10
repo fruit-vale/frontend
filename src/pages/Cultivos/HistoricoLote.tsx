@@ -15,8 +15,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { useAction } from '@/hooks/use-action'
 import { useConfirm } from '@/hooks/use-confirm'
 import { useRequest } from '@/hooks/use-request'
-import { formatarData, formatarNumero, numeroOuNull } from '@/lib/format'
-import { lotesService } from '@/services'
+import { formatarData, formatarNumero, numeroOuNull, plural } from '@/lib/format'
+import { lotesService, sensoresService } from '@/services'
 import { nomeCultura, type CulturaResumo } from '@/types/cultura'
 import type { Lote, Safra } from '@/types/lote'
 
@@ -118,6 +118,7 @@ export function HistoricoLote({ lote, culturas, podeEditar, onLoteAlterado }: Pr
 
     const producao = numeroOuNull(campos.producao)
     const observacoes = campos.observacoes || null
+    if (formulario.tipo === 'colheita' && !(await confirmarColheita())) return
 
     const salva = await run(() => {
       if (formulario.tipo === 'colheita')
@@ -152,8 +153,45 @@ export function HistoricoLote({ lote, culturas, podeEditar, onLoteAlterado }: Pr
       reload()
       // colheita, nova safra ou edição da atual mudam o que o card mostra
       onLoteAlterado()
-      toast.success('Safra salva.')
+      const desativados: string[] =
+        'sensores_desativados' in salva && Array.isArray(salva.sensores_desativados)
+          ? salva.sensores_desativados
+          : []
+      toast.success(
+        desativados.length
+          ? `Colheita registrada. ${desativados.length} ${plural(desativados.length, 'sensor desativado', 'sensores desativados')}: ${desativados.join(', ')}.`
+          : formulario.tipo === 'colheita'
+            ? 'Colheita registrada.'
+            : 'Safra salva.',
+      )
     }
+  }
+
+  /**
+   * A colheita encerra a safra e desativa os sensores do lote: mostra quais
+   * antes de gravar. Sem conseguir listar, avisa pelo total do lote.
+   */
+  async function confirmarColheita() {
+    const codigos = await sensoresService
+      .listar()
+      .then((todos) => todos.filter((s) => s.lote?.id === lote.id).map((s) => s.codigo_sensor))
+      .catch(() => null)
+    const total = codigos?.length ?? lote.total_sensores
+    const lista = codigos?.length ? ` (${codigos.join(', ')})` : ''
+    const cultura = nomeCultura(lote.cultura)
+
+    return confirm({
+      title: `Confirmar a colheita de ${lote.nome_identificacao}?`,
+      description: [
+        `A safra de ${cultura} é encerrada com colheita em ${formatarData(campos.data_colheita)}, e o lote passa a constar como colhido.`,
+        total > 0
+          ? `${total} ${plural(total, 'sensor deste lote será desativado', 'sensores deste lote serão desativados')}${lista}: o login MQTT é bloqueado e ${plural(total, 'ele sai', 'eles saem')} do lote. As leituras já recebidas continuam no histórico.\n\nPara usar na próxima safra, abra Sensores → Mudar de lote.`
+          : 'Este lote não tem sensores.',
+      ].join('\n\n'),
+      confirmLabel: 'Confirmar colheita',
+      cancelLabel: 'Voltar',
+      destructive: total > 0,
+    })
   }
 
   async function excluir(safra: Safra) {
@@ -181,15 +219,15 @@ export function HistoricoLote({ lote, culturas, podeEditar, onLoteAlterado }: Pr
     formulario.tipo === 'colheita' || (formulario.tipo === 'editar' && !editandoAtual)
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-3">
       {podeEditar && formulario.tipo === 'nenhum' && (
         <div>
           {lote.safra_atual_id ? (
-            <Button size="lg" onClick={() => abrir({ tipo: 'colheita' })}>
+            <Button onClick={() => abrir({ tipo: 'colheita' })}>
               Registrar colheita
             </Button>
           ) : (
-            <Button size="lg" onClick={() => abrir({ tipo: 'nova' })}>
+            <Button onClick={() => abrir({ tipo: 'nova' })}>
               Iniciar nova safra
             </Button>
           )}
@@ -296,23 +334,48 @@ export function HistoricoLote({ lote, culturas, podeEditar, onLoteAlterado }: Pr
       {safras?.length === 0 && <EmptyState>Nenhuma safra registrada.</EmptyState>}
 
       {safras && safras.length > 0 && (
-        <ol className="flex flex-col gap-3 border-l-2 border-border pl-4">
+        <ol className="flex flex-col gap-2 border-l-2 border-border pl-4">
           {safras.map((s) => (
             <li
               key={s.id}
-              className="relative rounded-xl bg-card p-4 ring-1 ring-foreground/10 before:absolute before:top-5 before:-left-[1.4rem] before:size-2.5 before:rounded-full before:bg-border data-[andamento=true]:before:bg-primary"
+              className="relative rounded-lg bg-card px-3 py-2.5 ring-1 ring-foreground/10 before:absolute before:top-4 before:-left-[1.4rem] before:size-2.5 before:rounded-full before:bg-border data-[andamento=true]:before:bg-primary"
               data-andamento={s.em_andamento}
             >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <strong>{nomeCultura(s.cultura)}</strong>
+              <div className="flex items-center gap-2">
+                <strong className="min-w-0 flex-1 truncate">{nomeCultura(s.cultura)}</strong>
                 <StatusBadge tone={s.em_andamento ? 'success' : 'neutral'}>
                   {s.em_andamento
                     ? 'Em andamento'
                     : `Colhida em ${formatarData(s.data_colheita)}`}
                 </StatusBadge>
+                {podeEditar && formulario.tipo === 'nenhum' && (
+                  <div className="flex shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label="Corrigir safra"
+                      title="Corrigir"
+                      onClick={() => abrir({ tipo: 'editar', safra: s })}
+                    >
+                      <PencilIcon />
+                    </Button>
+                    {!s.em_andamento && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="text-destructive"
+                        aria-label="Excluir safra"
+                        title="Excluir"
+                        onClick={() => excluir(s)}
+                      >
+                        <Trash2Icon />
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
 
-              <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-4">
+              <dl className="mt-1.5 grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm sm:grid-cols-4">
                 <Dado rotulo="Plantio" valor={formatarData(s.data_plantio)} />
                 <Dado
                   rotulo={s.em_andamento ? 'Colheita prevista' : 'Previsão era'}
@@ -342,28 +405,9 @@ export function HistoricoLote({ lote, culturas, podeEditar, onLoteAlterado }: Pr
               </dl>
 
               {s.observacoes && (
-                <Hint className="mt-2 text-sm">{s.observacoes}</Hint>
+                <Hint className="mt-1.5 text-sm">{s.observacoes}</Hint>
               )}
 
-              {podeEditar && formulario.tipo === 'nenhum' && (
-                <div className="mt-3 flex gap-1">
-                  <Button variant="ghost" size="sm" onClick={() => abrir({ tipo: 'editar', safra: s })}>
-                    <PencilIcon />
-                    Corrigir
-                  </Button>
-                  {!s.em_andamento && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive"
-                      onClick={() => excluir(s)}
-                    >
-                      <Trash2Icon />
-                      Excluir
-                    </Button>
-                  )}
-                </div>
-              )}
             </li>
           ))}
         </ol>
@@ -376,7 +420,7 @@ function Dado({ rotulo, valor }: { rotulo: string; valor: React.ReactNode }) {
   return (
     <div>
       <dt className="text-xs text-muted-foreground">{rotulo}</dt>
-      <dd className="font-medium">{valor}</dd>
+      <dd className="text-sm leading-tight font-medium">{valor}</dd>
     </div>
   )
 }

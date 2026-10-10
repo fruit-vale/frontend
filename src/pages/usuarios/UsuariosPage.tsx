@@ -1,27 +1,29 @@
 import { useState } from 'react'
-import { PencilIcon, PlusIcon } from 'lucide-react'
+import {
+  BuildingIcon,
+  PhoneIcon,
+  PencilIcon,
+  PlusIcon,
+  ShieldCheckIcon,
+  SproutIcon,
+  UserIcon,
+  UsersIcon,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { AppDialog } from '@/components/shared/AppDialog'
-import { EmptyState, ErrorMessage } from '@/components/shared/EmptyState'
-import { DataCard, NoResults } from '@/components/shared/DataCard'
+import { ErrorMessage } from '@/components/shared/EmptyState'
+import { EntityCard } from '@/components/shared/EntityCard'
+import { ListaPaginada } from '@/components/shared/ListaPaginada'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { SelectField } from '@/components/shared/SelectField'
+import { StatCard } from '@/components/shared/StatCard'
 import { StatusBadge, type Tone } from '@/components/shared/StatusBadge'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { useRequest } from '@/hooks/use-request'
-import { useSearch } from '@/hooks/use-search'
 import { porTexto, substituirPorId } from '@/lib/format'
 import { empresasService, usuariosService } from '@/services'
-import { ROLE_LABELS, type Role } from '@/types/auth'
+import { ROLE_LABELS, ROLES, type Role } from '@/types/auth'
 import type { Usuario } from '@/types/usuario'
 import { UsuarioForm } from './UsuarioForm'
 
@@ -36,8 +38,21 @@ const ROLE_TONE: Record<Role, Tone> = {
   analista: 'warning',
 }
 
+const ROLE_ICONE: Record<Role, React.ReactNode> = {
+  administrador: <ShieldCheckIcon />,
+  produtor: <SproutIcon />,
+  analista: <UserIcon />,
+}
+
+const ROLE_PLURAL: Record<Role, string> = {
+  administrador: 'Administradores',
+  produtor: 'Produtores',
+  analista: 'Analistas',
+}
+
 export default function UsuariosPage() {
   const [dialogo, setDialogo] = useState<Dialogo>({ modo: 'fechado' })
+  const [perfil, setPerfil] = useState('todos')
 
   const { data, error, loading, setData } = useRequest(
     async (signal) => {
@@ -47,23 +62,20 @@ export default function UsuariosPage() {
       ])
       return { usuarios, empresas }
     },
-    { errorPrefix: 'Não foi possível carregar os usuários' },
+    { errorPrefix: 'Não foi possível carregar os usuários', cacheKey: 'pagina-usuarios' },
   )
   const usuarios = data?.usuarios ?? []
   const empresas = data?.empresas ?? []
 
-  const { query, setQuery, filtrados } = useSearch(usuarios, (u) => [
-    u.nome,
-    u.email,
-    u.empresa?.razao_social,
-  ])
+  const contar = (role: Role) => usuarios.filter((u) => u.role === role).length
+  const visiveis = usuarios
+    .filter((u) => perfil === 'todos' || u.role === perfil)
+    .sort(porTexto((u) => u.nome))
 
   function salvo(usuario: Usuario, novo: boolean) {
     setData((atual) => ({
       empresas: atual?.empresas ?? [],
-      usuarios: substituirPorId(atual?.usuarios ?? [], usuario).sort(
-        porTexto((u) => u.nome),
-      ),
+      usuarios: substituirPorId(atual?.usuarios ?? [], usuario),
     }))
     setDialogo({ modo: 'fechado' })
     toast.success(novo ? `${usuario.nome} cadastrado.` : 'Alterações salvas.')
@@ -103,79 +115,81 @@ export default function UsuariosPage() {
       </AppDialog>
 
       <ErrorMessage message={error} />
-      {loading && <Skeleton className="h-48 w-full" />}
 
-      {!loading && !error && usuarios.length === 0 && (
-        <EmptyState>Nenhum usuário cadastrado.</EmptyState>
-      )}
+      <section aria-label="Resumo" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Usuários" value={usuarios.length} icon={<UsersIcon />} loading={loading} />
+        {ROLES.map((role) => (
+          <StatCard
+            key={role}
+            label={ROLE_PLURAL[role]}
+            value={contar(role)}
+            icon={ROLE_ICONE[role]}
+            loading={loading}
+          />
+        ))}
+      </section>
 
-      {usuarios.length > 0 && (
-        <DataCard
-          title="Usuários"
-          shown={filtrados.length}
-          total={usuarios.length}
-          search={query}
-          onSearchChange={setQuery}
-          searchPlaceholder="Buscar por nome, e-mail ou empresa"
-        >
-          {filtrados.length === 0 ? (
-            <NoResults>Nenhum usuário encontrado para “{query}”.</NoResults>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Usuário</TableHead>
-                  <TableHead>Perfil</TableHead>
-                  <TableHead className="w-20" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtrados.map((usuario) => (
-                  <TableRow key={usuario.id}>
-                    <TableCell>
-                      <div className="flex min-w-0 items-center gap-3">
-                        <Avatar className="size-10">
-                          <AvatarFallback className="bg-secondary font-semibold text-secondary-foreground">
-                            {usuario.nome.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <strong className="block truncate text-sm font-semibold">
-                            {usuario.nome}
-                          </strong>
-                          <span className="block truncate text-xs text-muted-foreground">
-                            {usuario.email}
-                          </span>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col items-start gap-0.5">
-                        <StatusBadge tone={usuario.role ? ROLE_TONE[usuario.role] : 'neutral'}>
-                          {usuario.role ? ROLE_LABELS[usuario.role] : 'Sem perfil'}
-                        </StatusBadge>
-                        <span className="text-xs text-muted-foreground">
-                          {usuario.empresa?.razao_social ?? 'Plataforma'}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label={`Editar ${usuario.nome}`}
-                        title="Editar"
-                        onClick={() => setDialogo({ modo: 'editar', usuario })}
-                      >
-                        <PencilIcon />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+      {loading ? (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} className="h-36" />
+          ))}
+        </div>
+      ) : (
+        <ListaPaginada
+          itens={visiveis}
+          campos={(u) => [u.nome, u.email, u.empresa?.razao_social]}
+          rotuloBusca="Buscar por nome, e-mail ou empresa"
+          vazio="Nenhum usuário encontrado."
+          porPagina={9}
+          listaClassName="grid gap-3 md:grid-cols-2 xl:grid-cols-3"
+          filtros={
+            <SelectField
+              aria-label="Filtrar por perfil"
+              value={perfil}
+              onValueChange={setPerfil}
+              options={[
+                { value: 'todos', label: 'Todos os perfis' },
+                ...ROLES.map((r) => ({ value: r, label: ROLE_LABELS[r] })),
+              ]}
+              className="h-9 w-48"
+            />
+          }
+          renderItem={(usuario) => (
+            <EntityCard
+              icon={<span className="text-base font-semibold">{usuario.nome.charAt(0).toUpperCase()}</span>}
+              title={usuario.nome}
+              subtitle={usuario.email}
+              badge={
+                <StatusBadge tone={usuario.role ? ROLE_TONE[usuario.role] : 'neutral'}>
+                  {usuario.role ? ROLE_LABELS[usuario.role] : 'Sem perfil'}
+                </StatusBadge>
+              }
+              actions={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label={`Editar ${usuario.nome}`}
+                  onClick={() => setDialogo({ modo: 'editar', usuario })}
+                >
+                  <PencilIcon />
+                  Editar
+                </Button>
+              }
+            >
+              <div className="flex flex-col gap-1 text-xs text-muted-foreground [&_svg]:size-3.5 [&_svg]:shrink-0">
+                <span className="flex items-center gap-1.5">
+                  <BuildingIcon />
+                  <span className="truncate">{usuario.empresa?.razao_social ?? 'Plataforma'}</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <PhoneIcon />
+                  <span className="truncate">{usuario.telefone || 'Sem telefone'}</span>
+                </span>
+              </div>
+            </EntityCard>
           )}
-        </DataCard>
+        />
       )}
     </section>
   )

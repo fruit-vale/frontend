@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { CheckIcon, EyeOffIcon, ListChecksIcon } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -107,7 +107,7 @@ function lerOculto() {
 }
 
 /** Guia do administrador: a ordem dos cadastros até o sensor enviar dados. */
-export function PrimeirosPassos() {
+export function PrimeirosPassos({ acoes }: { acoes?: ReactNode }) {
   const [contagens, setContagens] = useState<(number | null)[] | null>(null)
   const [oculto, setOculto] = useState(lerOculto)
 
@@ -133,22 +133,30 @@ export function PrimeirosPassos() {
     }
   }
 
+  // `acoes` dividem a linha com o botão do guia quando ele está recolhido
+  const linhaAcoes = acoes && <div className="flex flex-wrap justify-end gap-2">{acoes}</div>
+
   if (oculto)
     return (
-      <Button variant="outline" className="w-fit" onClick={() => ocultar(false)}>
-        <ListChecksIcon />
-        Mostrar o guia de primeiros passos
-      </Button>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Button variant="outline" className="w-fit" onClick={() => ocultar(false)}>
+          <ListChecksIcon />
+          Mostrar o guia de primeiros passos
+        </Button>
+        {acoes && <div className="flex flex-wrap gap-2">{acoes}</div>}
+      </div>
     )
-  if (!contagens) return null
+  if (!contagens) return linhaAcoes || null
 
   const feitas = contagens.map((c) => (c ?? 0) > 0)
   const total = feitas.filter(Boolean).length
   // tudo configurado: o guia sai do caminho
-  if (total === ETAPAS.length) return null
+  if (total === ETAPAS.length) return linhaAcoes || null
   const atual = feitas.indexOf(false)
 
   return (
+    <>
+    {linhaAcoes}
     <Card aria-label="Primeiros passos">
       <CardContent className="flex flex-col gap-4">
         <header className="flex flex-wrap items-start justify-between gap-3">
@@ -226,5 +234,6 @@ export function PrimeirosPassos() {
         </ol>
       </CardContent>
     </Card>
+    </>
   )
 }

@@ -1,5 +1,8 @@
 import { Suspense } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Link, Outlet, useLocation } from 'react-router-dom'
+import { ROUTES } from '@/config/routes'
+import { useAuth } from '@/hooks/use-auth'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { ErrorBoundary } from '@/components/shared/ErrorBoundary'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -20,9 +23,16 @@ function PaginaCarregando() {
   )
 }
 
+/** "Maria da Silva" → "MS": primeira e última inicial. */
+const iniciais = (nome: string) => {
+  const partes = nome.trim().split(/\s+/)
+  return (partes[0][0] + (partes.length > 1 ? partes[partes.length - 1][0] : '')).toUpperCase()
+}
+
 /** Moldura das telas autenticadas: menu lateral + conteúdo da rota. */
 export function AppLayout() {
   const { pathname } = useLocation()
+  const { user } = useAuth()
 
   return (
     <SidebarProvider>
@@ -34,6 +44,22 @@ export function AppLayout() {
           <span className="font-heading text-lg font-semibold text-primary md:hidden">
             Fruitvale
           </span>
+          {user && (
+            <Link
+              to={ROUTES.perfil}
+              className="ml-auto flex min-w-0 items-center gap-2 rounded-full py-1 pl-3 hover:bg-muted"
+              aria-label="Abrir meu perfil"
+            >
+              <strong className="truncate text-sm font-semibold">
+                Olá, {user.nome.split(' ')[0]}!
+              </strong>
+              <Avatar>
+                <AvatarFallback className="bg-primary text-xs font-semibold text-primary-foreground">
+                  {iniciais(user.nome)}
+                </AvatarFallback>
+              </Avatar>
+            </Link>
+          )}
         </header>
 
         <div className="mx-auto w-full max-w-7xl flex-1 p-4 sm:p-6 lg:p-8">

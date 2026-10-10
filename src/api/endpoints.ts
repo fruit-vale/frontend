@@ -22,6 +22,7 @@ export const ENDPOINTS = {
     base: '/culturas',
     porId: (id: number) => `/culturas/${id}`,
   },
+  previsao: '/previsao',
   lotes: {
     base: '/lotes',
     porId: (id: number) => `/lotes/${id}`,
@@ -35,6 +36,7 @@ export const ENDPOINTS = {
     porId: (id: number) => `/sensores/${id}`,
     medidas: (id: number) => `/sensores/${id}/medidas`,
     senha: (id: number) => `/sensores/${id}/senha`,
+    lote: (id: number) => `/sensores/${id}/lote`,
   },
   painel: {
     base: '/painel',

@@ -1,27 +1,29 @@
 import { useState } from 'react'
-import { PencilIcon, PlusIcon, Trash2Icon, WarehouseIcon } from 'lucide-react'
+import {
+  BuildingIcon,
+  CpuIcon,
+  PencilIcon,
+  PlusIcon,
+  RulerIcon,
+  SproutIcon,
+  Trash2Icon,
+  WarehouseIcon,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/api'
 import { AppDialog } from '@/components/shared/AppDialog'
-import { EmptyState, ErrorMessage } from '@/components/shared/EmptyState'
-import { DataCard, EntityCell, NoResults } from '@/components/shared/DataCard'
+import { ErrorMessage } from '@/components/shared/EmptyState'
+import { Dados, EntityCard } from '@/components/shared/EntityCard'
+import { ListaPaginada } from '@/components/shared/ListaPaginada'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { SelectField } from '@/components/shared/SelectField'
+import { StatCard } from '@/components/shared/StatCard'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { useConfirm } from '@/hooks/use-confirm'
 import { useRequest } from '@/hooks/use-request'
-import { useSearch } from '@/hooks/use-search'
-import { formatarHectares, plural, substituirPorId } from '@/lib/format'
+import { formatarHectares, formatarNumero, substituirPorId } from '@/lib/format'
 import { empresasService, propriedadesService } from '@/services'
 import type { PropriedadeCompleta } from '@/types/propriedade'
 import { PropriedadeForm } from './PropriedadeForm'
@@ -48,31 +50,25 @@ export default function PropriedadesPage() {
       ])
       return { propriedades, empresas }
     },
-    { errorPrefix: 'Não foi possível carregar as propriedades' },
+    { errorPrefix: 'Não foi possível carregar as propriedades', cacheKey: 'pagina-propriedades' },
   )
   const propriedades = data?.propriedades ?? []
   const empresas = data?.empresas ?? []
 
-  const visiveis =
-    filtroEmpresa === 'todas'
-      ? propriedades
-      : propriedades.filter((p) => p.empresa_id === Number(filtroEmpresa))
+  const visiveis = propriedades
+    .filter((p) => filtroEmpresa === 'todas' || p.empresa_id === Number(filtroEmpresa))
+    .sort(porEmpresaENome)
 
-  const { query, setQuery, filtrados: buscadas } = useSearch(visiveis, (p) => [
-    p.nome,
-    p.municipio,
-    p.estado,
-    p.empresa.razao_social,
-  ])
+  const area = propriedades.reduce((soma, p) => soma + (p.area_total_ha ?? 0), 0)
+  const totalLotes = propriedades.reduce((soma, p) => soma + p.total_lotes, 0)
+  const totalSensores = propriedades.reduce((soma, p) => soma + p.total_sensores, 0)
 
   const fechar = () => setDialogo({ modo: 'fechado' })
 
   function salva(propriedade: PropriedadeCompleta, nova: boolean) {
     setData((atual) => ({
       empresas: atual?.empresas ?? [],
-      propriedades: substituirPorId(atual?.propriedades ?? [], propriedade).sort(
-        porEmpresaENome,
-      ),
+      propriedades: substituirPorId(atual?.propriedades ?? [], propriedade),
     }))
     fechar()
     toast.success(nova ? 'Propriedade cadastrada.' : 'Alterações salvas.')
@@ -98,11 +94,6 @@ export default function PropriedadesPage() {
       toast.error(getErrorMessage(e, 'Erro ao excluir.'))
     }
   }
-
-  const opcoesEmpresa = [
-    { value: 'todas', label: 'Todas as empresas' },
-    ...empresas.map((e) => ({ value: String(e.id), label: e.razao_social })),
-  ]
 
   return (
     <section className="space-y-6">
@@ -144,109 +135,113 @@ export default function PropriedadesPage() {
       </AppDialog>
 
       <ErrorMessage message={error} />
-      {loading && <Skeleton className="h-48 w-full" />}
 
-      {!loading && !error && visiveis.length === 0 && (
-        <EmptyState>
-          {empresas.length === 0
-            ? 'Cadastre uma empresa antes de cadastrar propriedades.'
-            : 'Nenhuma propriedade cadastrada ainda.'}
-        </EmptyState>
-      )}
+      <section aria-label="Resumo" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label="Propriedades"
+          value={propriedades.length}
+          icon={<WarehouseIcon />}
+          loading={loading}
+        />
+        <StatCard
+          label="Área total"
+          value={`${formatarNumero(area)} ha`}
+          icon={<RulerIcon />}
+          loading={loading}
+        />
+        <StatCard label="Lotes" value={totalLotes} icon={<SproutIcon />} loading={loading} />
+        <StatCard label="Sensores" value={totalSensores} icon={<CpuIcon />} loading={loading} />
+      </section>
 
-      {propriedades.length > 0 && (
-        <DataCard
-          title="Propriedades"
-          shown={buscadas.length}
-          total={propriedades.length}
-          search={query}
-          onSearchChange={setQuery}
-          searchPlaceholder="Buscar por nome ou município"
-          filters={
+      {loading ? (
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} className="h-48" />
+          ))}
+        </div>
+      ) : (
+        <ListaPaginada
+          itens={visiveis}
+          campos={(p) => [p.nome, p.municipio, p.estado, p.empresa.razao_social]}
+          rotuloBusca="Buscar por nome, município ou empresa"
+          vazio={
+            empresas.length === 0
+              ? 'Cadastre uma empresa antes de cadastrar propriedades.'
+              : 'Nenhuma propriedade encontrada.'
+          }
+          porPagina={9}
+          listaClassName="grid gap-3 md:grid-cols-2 xl:grid-cols-3"
+          filtros={
             empresas.length > 1 && (
               <SelectField
                 aria-label="Filtrar por empresa"
                 value={filtroEmpresa}
                 onValueChange={setFiltroEmpresa}
-                options={opcoesEmpresa}
+                options={[
+                  { value: 'todas', label: 'Todas as empresas' },
+                  ...empresas.map((e) => ({ value: String(e.id), label: e.razao_social })),
+                ]}
                 className="h-9 w-56"
               />
             )
           }
-        >
-          {buscadas.length === 0 ? (
-            <NoResults>Nenhuma propriedade encontrada com esses filtros.</NoResults>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Propriedade</TableHead>
-                  <TableHead className="hidden sm:table-cell">Resumo</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-24" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {buscadas.map((p) => {
-                  const emUso = p.total_lotes > 0 || p.total_sensores > 0
-                  return (
-                    <TableRow key={p.id}>
-                      <TableCell>
-                        <EntityCell
-                          icon={<WarehouseIcon />}
-                          title={p.nome}
-                          subtitle={`${p.municipio}/${p.estado} · ${p.empresa.razao_social}`}
-                        />
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">
-                        <span className="block text-sm tabular-nums">
-                          {formatarHectares(p.area_total_ha)}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {p.total_lotes} {plural(p.total_lotes, 'lote', 'lotes')} ·{' '}
-                          {p.total_sensores} {plural(p.total_sensores, 'sensor', 'sensores')}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge tone={p.status === 'ATIVA' ? 'success' : 'neutral'}>
-                          {p.status === 'ATIVA' ? 'Ativa' : 'Inativa'}
-                        </StatusBadge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label={`Editar ${p.nome}`}
-                            title="Editar"
-                            onClick={() => setDialogo({ modo: 'editar', propriedade: p })}
-                          >
-                            <PencilIcon />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive"
-                            aria-label={`Excluir ${p.nome}`}
-                            onClick={() => excluir(p)}
-                            disabled={emUso}
-                            title={
-                              emUso
-                                ? 'Propriedade com lotes ou sensores não pode ser excluída; marque-a como inativa.'
-                                : 'Excluir'
-                            }
-                          >
-                            <Trash2Icon />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </DataCard>
+          renderItem={(p) => {
+            const emUso = p.total_lotes > 0 || p.total_sensores > 0
+            return (
+              <EntityCard
+                icon={<WarehouseIcon />}
+                title={p.nome}
+                subtitle={`${p.municipio}/${p.estado}`}
+                badge={
+                  <StatusBadge tone={p.status === 'ATIVA' ? 'success' : 'neutral'}>
+                    {p.status === 'ATIVA' ? 'Ativa' : 'Inativa'}
+                  </StatusBadge>
+                }
+                actions={
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`Editar ${p.nome}`}
+                      onClick={() => setDialogo({ modo: 'editar', propriedade: p })}
+                    >
+                      <PencilIcon />
+                      Editar
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive"
+                      aria-label={`Excluir ${p.nome}`}
+                      onClick={() => excluir(p)}
+                      disabled={emUso}
+                      title={
+                        emUso
+                          ? 'Propriedade com lotes ou sensores não pode ser excluída; marque-a como inativa.'
+                          : undefined
+                      }
+                    >
+                      <Trash2Icon />
+                      Excluir
+                    </Button>
+                  </>
+                }
+              >
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground [&_svg]:size-3.5 [&_svg]:shrink-0">
+                  <BuildingIcon />
+                  <span className="truncate">{p.empresa.razao_social}</span>
+                </span>
+                <Dados
+                  itens={[
+                    ['Área', formatarHectares(p.area_total_ha)],
+                    ['Lotes', p.total_lotes],
+                    ['Sensores', p.total_sensores],
+                  ]}
+                />
+              </EntityCard>
+            )
+          }}
+        />
       )}
     </section>
   )

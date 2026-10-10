@@ -25,7 +25,9 @@ type Props = {
   onCancelar: () => void
 }
 
-export function NovoSensorForm({ lotes, onCriado, onCancelar }: Props) {
+export function NovoSensorForm({ lotes: todosLotes, onCriado, onCancelar }: Props) {
+  // a API só aceita sensor em lote em cultivo (nem em preparo, nem colhido)
+  const lotes = todosLotes.filter((l) => l.situacao === 'EM_CULTIVO')
   const [identificador, setIdentificador] = useState('')
   const [tipo, setTipo] = useState('')
   const [loteId, setLoteId] = useState(lotes.length === 1 ? String(lotes[0].id) : '')
@@ -73,7 +75,13 @@ export function NovoSensorForm({ lotes, onCriado, onCancelar }: Props) {
   if (lotes.length === 0) {
     return (
       <div className="flex flex-col gap-4">
-        <ErrorMessage message="Nenhum lote disponível. Cadastre um lote em Cultivos e Lotes antes de cadastrar sensores." />
+        <ErrorMessage
+          message={
+            todosLotes.length === 0
+              ? 'Nenhum lote disponível. Cadastre um lote em Cultivos e Lotes antes de cadastrar sensores.'
+              : 'Nenhum lote em cultivo. O sensor só pode ser cadastrado num lote em cultivo: em Cultivos e Lotes, mude a situação de um lote em preparo para "Em cultivo" ou inicie uma nova safra num lote colhido.'
+          }
+        />
         <div>
           <Button variant="outline" size="lg" onClick={onCancelar}>
             Fechar
@@ -118,7 +126,7 @@ export function NovoSensorForm({ lotes, onCriado, onCancelar }: Props) {
           </datalist>
         </FormField>
 
-        <FormField label="Lote" htmlFor="lote" required>
+        <FormField label="Lote" htmlFor="lote" required hint="Só aparecem os lotes em cultivo.">
           <SelectField
             id="lote"
             value={loteId}

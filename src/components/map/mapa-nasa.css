@@ -10,8 +10,16 @@
 
 /* pixels de 30 m ampliados sem suavização (também durante a animação de zoom),
    para não parecer mais nítido do que é */
-.mapa-nasa .leaflet-tile {
+.mapa-nasa .camada-nasa .leaflet-tile {
   image-rendering: pixelated;
+}
+
+/* logo do Google exigido pela Map Tiles API, no canto inferior esquerdo */
+.mapa-nasa .mapa-nasa__logo-google {
+  width: 66px;
+  height: auto;
+  margin: 0 0 6px 8px !important;
+  pointer-events: none;
 }
 
 .mapa-nasa__lote {
