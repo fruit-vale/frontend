@@ -1,32 +1,36 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import type { Empresa } from '../../auth/authContextInstance'
-import CampoCoordenadas from '../../components/CampoCoordenadas/CampoCoordenadas'
-import MapaNasa from '../../components/MapaNasa/MapaNasa'
-import SeletorImagem from '../../components/MapaNasa/SeletorImagem'
-import { apiFetch } from '../../lib/api'
-import {
-  listarEstados,
-  listarMunicipios,
-  malhaEstado,
-  malhaMunicipio,
-  type Estado,
-  type Municipio,
-} from '../../lib/ibge'
-import type { ImagemDisponivel } from '../../lib/nasa'
-import type { PropriedadeCompleta, StatusPropriedade } from './tipos'
-
-type Ponto = { lat: number; lng: number }
+import MapaNasa from '@/components/map/MapaNasa'
+import { SeletorImagem } from '@/components/map/SeletorImagem'
+import { CoordinateField } from '@/components/shared/CoordinateField'
+import { ErrorMessage, Hint } from '@/components/shared/EmptyState'
+import { FormActions } from '@/components/shared/FormActions'
+import { FormField, FormGrid } from '@/components/shared/FormField'
+import { LocalidadeFields } from '@/components/shared/LocalidadeFields'
+import { SelectField } from '@/components/shared/SelectField'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { useAction } from '@/hooks/use-action'
+import { numeroOuNull } from '@/lib/format'
+import { ibgeService, propriedadesService } from '@/services'
+import type { ImagemDisponivel } from '@/services/nasa.service'
+import type { Empresa } from '@/types/empresa'
+import type { PropriedadeCompleta, StatusPropriedade } from '@/types/propriedade'
 
 type Props = {
   empresas: Empresa[]
   /** Propriedade em edição; ausente no cadastro. */
   propriedade?: PropriedadeCompleta
-  onSalva: (propriedade: PropriedadeCompleta) => void
+  onSalva: (propriedade: PropriedadeCompleta, nova: boolean) => void
   onCancelar: () => void
 }
 
-function PropriedadeForm({ empresas, propriedade, onSalva, onCancelar }: Props) {
+const STATUS_OPTIONS = [
+  { value: 'ATIVA', label: 'Ativa' },
+  { value: 'INATIVA', label: 'Inativa' },
+]
+
+export function PropriedadeForm({ empresas, propriedade, onSalva, onCancelar }: Props) {
   const [empresaId, setEmpresaId] = useState(String(propriedade?.empresa_id ?? ''))
   const [nome, setNome] = useState(propriedade?.nome ?? '')
   const [estado, setEstado] = useState(propriedade?.estado ?? '')
@@ -38,7 +42,7 @@ function PropriedadeForm({ empresas, propriedade, onSalva, onCancelar }: Props) 
     lat: propriedade?.latitude ?? null,
     lng: propriedade?.longitude ?? null,
   })
-  const ponto: Ponto | null =
+  const ponto =
     coordenadas.lat !== null && coordenadas.lng !== null
       ? { lat: coordenadas.lat, lng: coordenadas.lng }
       : null
@@ -46,29 +50,8 @@ function PropriedadeForm({ empresas, propriedade, onSalva, onCancelar }: Props) 
   // contorno do estado/município escolhido: o mapa dá zoom nele
   const [contorno, setContorno] = useState<GeoJSON.GeoJsonObject | null>(null)
   const ultimaBusca = useRef(0)
-  const [erro, setErro] = useState('')
-  const [salvando, setSalvando] = useState(false)
-
-  const [estados, setEstados] = useState<Estado[] | null>(null)
-  const [erroIbge, setErroIbge] = useState(false)
-  const [cidades, setCidades] = useState<{ uf: string; lista: Municipio[] }>()
-
-  useEffect(() => {
-    listarEstados().then(setEstados).catch(() => setErroIbge(true))
-  }, [])
-
-  useEffect(() => {
-    if (!estado || erroIbge) return
-    let ativo = true
-    listarMunicipios(estado)
-      .then((lista) => ativo && setCidades({ uf: estado, lista }))
-      .catch(() => ativo && setErroIbge(true))
-    return () => {
-      ativo = false
-    }
-  }, [estado, erroIbge])
-
-  const cidadesDaUf = cidades?.uf === estado ? cidades.lista : null
+  const [erroLocal, setErroLocal] = useState('')
+  const { run, pending, error } = useAction()
 
   /** Busca o contorno no IBGE; ignora respostas de escolhas anteriores. */
   function enquadrar(busca: Promise<GeoJSON.GeoJsonObject>) {
@@ -82,199 +65,153 @@ function PropriedadeForm({ empresas, propriedade, onSalva, onCancelar }: Props) 
   function escolherEstado(uf: string) {
     setEstado(uf)
     setMunicipio('')
-    if (uf) enquadrar(malhaEstado(uf))
+    if (uf) enquadrar(ibgeService.malhaEstado(uf))
   }
 
-  function escolherMunicipio(nome: string) {
-    setMunicipio(nome)
-    const cidade = cidadesDaUf?.find((c) => c.nome === nome)
-    if (cidade) enquadrar(malhaMunicipio(cidade.id))
-    else if (estado) enquadrar(malhaEstado(estado))
+  function escolherMunicipio(nomeMunicipio: string, escolhido?: { id: number }) {
+    setMunicipio(nomeMunicipio)
+    if (escolhido) enquadrar(ibgeService.malhaMunicipio(escolhido.id))
+    else if (estado) enquadrar(ibgeService.malhaEstado(estado))
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function enviar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!propriedade && !empresaId) return setErro('Selecione a empresa da propriedade.')
+    if (!propriedade && !empresaId) return setErroLocal('Selecione a empresa da propriedade.')
     if ((coordenadas.lat === null) !== (coordenadas.lng === null))
-      return setErro('Preencha latitude e longitude, ou deixe as duas em branco.')
+      return setErroLocal('Preencha latitude e longitude, ou deixe as duas em branco.')
+    setErroLocal('')
 
-    const areaNumero = area.replace(',', '.').trim()
-    setErro('')
-    setSalvando(true)
-    try {
-      const salva = await apiFetch<PropriedadeCompleta>(
-        propriedade ? `/propriedades/${propriedade.id}` : '/propriedades',
-        {
-          method: propriedade ? 'PATCH' : 'POST',
-          body: JSON.stringify({
-            ...(!propriedade && { empresa_id: Number(empresaId) }),
-            nome,
-            estado,
-            municipio,
-            area_total_ha: areaNumero === '' ? null : Number(areaNumero),
-            status,
-            latitude: ponto?.lat ?? null,
-            longitude: ponto?.lng ?? null,
-          }),
-        },
-      )
-      onSalva(salva)
-    } catch (error) {
-      setErro(error instanceof Error ? error.message : 'Erro ao salvar.')
-    } finally {
-      setSalvando(false)
+    const payload = {
+      ...(!propriedade && { empresa_id: Number(empresaId) }),
+      nome,
+      estado,
+      municipio,
+      area_total_ha: numeroOuNull(area),
+      status,
+      latitude: ponto?.lat ?? null,
+      longitude: ponto?.lng ?? null,
     }
+    const salva = await run(() =>
+      propriedade
+        ? propriedadesService.atualizar(propriedade.id, payload)
+        : propriedadesService.criar(payload),
+    )
+    if (salva) onSalva(salva, !propriedade)
   }
 
   return (
-    <form className="form-card" onSubmit={handleSubmit} noValidate>
-      <div className="form-mapa">
-        <div className="form-mapa__campos">
-      <div className="form-grid">
-        <label className="form-field">
-          <span>Empresa *</span>
-          <select
-            value={empresaId}
-            onChange={(event) => setEmpresaId(event.target.value)}
-            // lotes, sensores e culturas dependem da empresa: não muda depois
-            disabled={!!propriedade}
-          >
-            <option value="">Selecione...</option>
-            {empresas.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.razao_social}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="form-field">
-          <span>Nome *</span>
-          <input
-            value={nome}
-            onChange={(event) => setNome(event.target.value)}
-            maxLength={100}
-            placeholder="Fazenda Boa Vista"
+    <form className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]" onSubmit={enviar} noValidate>
+      <div className="flex flex-col gap-5">
+        <FormGrid>
+          <FormField label="Empresa" htmlFor="empresa" required>
+            <SelectField
+              id="empresa"
+              value={empresaId}
+              onValueChange={setEmpresaId}
+              options={empresas.map((e) => ({ value: String(e.id), label: e.razao_social }))}
+              // lotes, sensores e culturas dependem da empresa: não muda depois
+              disabled={!!propriedade}
+            />
+          </FormField>
+          <FormField label="Nome" htmlFor="nome" required>
+            <Input
+              id="nome"
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              maxLength={100}
+              placeholder="Fazenda Boa Vista"
+              required
+              autoFocus
+            />
+          </FormField>
+        </FormGrid>
+
+        <FormGrid>
+          <LocalidadeFields
+            idPrefix="propriedade"
             required
-            autoFocus
+            estado={estado}
+            municipio={municipio}
+            onEstadoChange={escolherEstado}
+            onMunicipioChange={escolherMunicipio}
           />
-        </label>
-      </div>
+          <FormField label="Área total (ha)" htmlFor="area">
+            <Input
+              id="area"
+              type="number"
+              min={0}
+              step="0.01"
+              value={area}
+              onChange={(e) => setArea(e.target.value)}
+            />
+          </FormField>
+          <FormField label="Status" htmlFor="status">
+            <SelectField
+              id="status"
+              value={status}
+              onValueChange={(v) => setStatus(v as StatusPropriedade)}
+              options={STATUS_OPTIONS}
+            />
+          </FormField>
+        </FormGrid>
 
-      <div className="form-grid">
-        <label className="form-field">
-          <span>Estado *</span>
-          {erroIbge ? (
-            <input value={estado} onChange={(event) => setEstado(event.target.value.toUpperCase())} maxLength={2} placeholder="UF (ex.: PE)" />
-          ) : (
-            <select
-              value={estado}
-              onChange={(event) => escolherEstado(event.target.value)}
-              disabled={!estados}
+        <fieldset className="flex flex-col gap-3 rounded-xl border p-4">
+          <legend className="px-1 text-sm font-medium">
+            Localização (sede ou centro da propriedade)
+          </legend>
+          <CoordinateField
+            idPrefix="propriedade"
+            lat={coordenadas.lat}
+            lng={coordenadas.lng}
+            onChange={(lat, lng) => setCoordenadas({ lat, lng })}
+          />
+          {ponto ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-fit"
+              onClick={() => setCoordenadas({ lat: null, lng: null })}
             >
-              <option value="">{estados ? 'Selecione...' : 'Carregando estados...'}</option>
-              {estados?.map((e) => (
-                <option key={e.sigla} value={e.sigla}>
-                  {e.nome}
-                </option>
-              ))}
-            </select>
-          )}
-        </label>
-        <label className="form-field">
-          <span>Município *</span>
-          {erroIbge ? (
-            <input value={municipio} onChange={(event) => setMunicipio(event.target.value)} maxLength={100} />
+              Remover localização
+            </Button>
           ) : (
-            <select value={municipio} onChange={(event) => escolherMunicipio(event.target.value)} disabled={!cidadesDaUf}>
-              <option value="">
-                {!estado ? 'Selecione o estado primeiro' : cidadesDaUf ? 'Selecione...' : 'Carregando cidades...'}
-              </option>
-              {/* mantém o município salvo mesmo que o nome no IBGE tenha mudado */}
-              {municipio && cidadesDaUf && !cidadesDaUf.some((c) => c.nome === municipio) && (
-                <option value={municipio}>{municipio}</option>
-              )}
-              {cidadesDaUf?.map((c) => (
-                <option key={c.id} value={c.nome}>
-                  {c.nome}
-                </option>
-              ))}
-            </select>
+            <Hint>
+              Escolha o estado e o município para o mapa ir até lá. Você também pode
+              clicar no mapa para preencher as coordenadas. É por esse ponto que o mapa
+              abre ao cadastrar os lotes da propriedade.
+            </Hint>
           )}
-        </label>
-        <label className="form-field">
-          <span>Área total (ha)</span>
-          <input type="number" min={0} step="0.01" value={area} onChange={(event) => setArea(event.target.value)} />
-        </label>
-        <label className="form-field">
-          <span>Status</span>
-          <select value={status} onChange={(event) => setStatus(event.target.value as StatusPropriedade)}>
-            <option value="ATIVA">Ativa</option>
-            <option value="INATIVA">Inativa</option>
-          </select>
-        </label>
-      </div>
-      {erroIbge && (
-        <p className="form-hint">Não foi possível carregar a lista do IBGE; digite manualmente.</p>
-      )}
+        </fieldset>
 
-      <fieldset className="propriedade-mapa">
-        <legend>Localização (sede ou centro da propriedade)</legend>
+        <ErrorMessage message={erroLocal || error} />
 
-        <CampoCoordenadas
-          lat={coordenadas.lat}
-          lng={coordenadas.lng}
-          onChange={(lat, lng) => setCoordenadas({ lat, lng })}
+        <FormActions
+          submitLabel={propriedade ? 'Salvar alterações' : 'Cadastrar propriedade'}
+          pending={pending}
+          onCancel={onCancelar}
         />
-        {ponto ? (
-          <button
-            type="button"
-            className="propriedade-mapa__remover"
-            onClick={() => setCoordenadas({ lat: null, lng: null })}
-          >
-            Remover localização
-          </button>
-        ) : (
-          <p className="form-hint">
-            Escolha o estado e o município para o mapa ir até lá. Você também
-            pode clicar no mapa para preencher as coordenadas. É por esse ponto
-            que o mapa abre ao cadastrar os lotes da propriedade.
-          </p>
-        )}
-
-      </fieldset>
-
-      {erro && (
-        <p className="form-error" role="alert">
-          {erro}
-        </p>
-      )}
-
-      <div className="form-actions">
-        <button type="submit" className="btn-primary" disabled={salvando}>
-          {salvando ? 'Salvando...' : propriedade ? 'Salvar alterações' : 'Cadastrar propriedade'}
-        </button>
-        <button type="button" className="btn-secondary" onClick={onCancelar}>
-          Cancelar
-        </button>
       </div>
-        </div>
 
-        <aside className="form-mapa__mapa">
-          <MapaNasa
-            centro={null}
-            poligono={null}
-            ponto={ponto}
-            contorno={contorno}
-            imagem={imagem}
-            onMoverCentro={(lat, lng) => setCoordenadas({ lat, lng })}
+      <aside className="flex min-w-0 flex-col gap-3">
+        <MapaNasa
+          className="h-[26rem] lg:h-[32rem]"
+          centro={null}
+          poligono={null}
+          ponto={ponto}
+          contorno={contorno}
+          imagem={imagem}
+          onMoverCentro={(lat, lng) => setCoordenadas({ lat, lng })}
+        />
+        {ponto && (
+          <SeletorImagem
+            lat={ponto.lat}
+            lng={ponto.lng}
+            selecionada={imagem}
+            onSelecionar={setImagem}
           />
-          {ponto && (
-            <SeletorImagem lat={ponto.lat} lng={ponto.lng} selecionada={imagem} onSelecionar={setImagem} />
-          )}
-        </aside>
-      </div>
+        )}
+      </aside>
     </form>
   )
 }
-
-export default PropriedadeForm

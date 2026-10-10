@@ -1,13 +1,20 @@
+import { PlusIcon, XIcon } from 'lucide-react'
+import { FormField } from '@/components/shared/FormField'
+import { SelectField } from '@/components/shared/SelectField'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { TIPO_MEDIDA_LABELS, UNIDADE_PADRAO, type TipoMedida } from '@/types/sensor'
 import { MEDIDAS_MAX, gerarChave, novaMedida, type MedidaRascunho } from './medidas'
-import { TIPO_MEDIDA_LABELS, UNIDADE_PADRAO, type TipoMedida } from './tipos'
 
 type Props = {
   medidas: MedidaRascunho[]
   onChange: (medidas: MedidaRascunho[]) => void
 }
 
+const TIPOS = Object.entries(TIPO_MEDIDA_LABELS).map(([value, label]) => ({ value, label }))
+
 /** Lista editável dos dados que o sensor envia (nome, tipo, unidade e chave do JSON). */
-function EditorMedidas({ medidas, onChange }: Props) {
+export function EditorMedidas({ medidas, onChange }: Props) {
   function alterar(i: number, mudanca: Partial<MedidaRascunho>) {
     onChange(
       medidas.map((m, j) => {
@@ -24,75 +31,78 @@ function EditorMedidas({ medidas, onChange }: Props) {
   }
 
   return (
-    <div className="editor-medidas">
+    <div className="flex flex-col gap-3">
       {medidas.map((m, i) => (
-        <div className="editor-medidas__linha" key={m.id ?? `novo-${i}`}>
-          <label className="form-field">
-            <span>Nome *</span>
-            <input
+        <div
+          key={m.id ?? `novo-${i}`}
+          className="grid grid-cols-2 items-end gap-3 rounded-xl border bg-muted/30 p-3 lg:grid-cols-[1.4fr_1.2fr_0.7fr_1.2fr_auto]"
+        >
+          <FormField label="Nome" htmlFor={`medida-nome-${i}`} required>
+            <Input
+              id={`medida-nome-${i}`}
               value={m.nome}
-              onChange={(event) => alterar(i, { nome: event.target.value })}
+              onChange={(e) => alterar(i, { nome: e.target.value })}
               maxLength={60}
               placeholder="Temperatura do ar"
             />
-          </label>
-          <label className="form-field">
-            <span>Tipo</span>
-            <select
+          </FormField>
+          <FormField label="Tipo" htmlFor={`medida-tipo-${i}`}>
+            <SelectField
+              id={`medida-tipo-${i}`}
               value={m.tipo}
-              onChange={(event) => alterar(i, { tipo: event.target.value as TipoMedida })}
-            >
-              {Object.entries(TIPO_MEDIDA_LABELS).map(([valor, rotulo]) => (
-                <option key={valor} value={valor}>
-                  {rotulo}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="form-field editor-medidas__unidade">
-            <span>Unidade</span>
-            <input
+              onValueChange={(v) => alterar(i, { tipo: v as TipoMedida })}
+              options={TIPOS}
+            />
+          </FormField>
+          <FormField label="Unidade" htmlFor={`medida-un-${i}`}>
+            <Input
+              id={`medida-un-${i}`}
               value={m.unidade}
-              onChange={(event) => alterar(i, { unidade: event.target.value })}
+              onChange={(e) => alterar(i, { unidade: e.target.value })}
               maxLength={20}
               placeholder="—"
             />
-          </label>
-          <label className="form-field">
-            <span>Chave no JSON</span>
-            <input
+          </FormField>
+          <FormField label="Chave no JSON" htmlFor={`medida-chave-${i}`}>
+            <Input
+              id={`medida-chave-${i}`}
               value={m.chave}
-              onChange={(event) =>
-                alterar(i, { chave: event.target.value.toLowerCase(), chaveManual: true })
+              onChange={(e) =>
+                alterar(i, { chave: e.target.value.toLowerCase(), chaveManual: true })
               }
               maxLength={40}
               spellCheck={false}
               autoCapitalize="off"
             />
-          </label>
-          <button
+          </FormField>
+          <Button
             type="button"
-            className="editor-medidas__remover"
+            variant="ghost"
+            size="icon"
+            className="text-destructive"
             onClick={() => onChange(medidas.filter((_, j) => j !== i))}
             aria-label={`Remover ${m.nome || `dado ${i + 1}`}`}
             title="Remover"
           >
-            ×
-          </button>
+            <XIcon />
+          </Button>
         </div>
       ))}
 
-      <div className="editor-medidas__acoes">
-        <button
+      <div className="flex flex-wrap gap-2">
+        <Button
           type="button"
+          variant="outline"
           onClick={() => onChange([...medidas, novaMedida()])}
           disabled={medidas.length >= MEDIDAS_MAX}
         >
-          + Adicionar dado
-        </button>
+          <PlusIcon />
+          Adicionar dado
+        </Button>
         {medidas.length === 0 && (
-          <button
+          <Button
             type="button"
+            variant="outline"
             onClick={() =>
               onChange([
                 novaMedida('TEMPERATURA', 'Temperatura'),
@@ -101,11 +111,9 @@ function EditorMedidas({ medidas, onChange }: Props) {
             }
           >
             Usar temperatura e umidade (ex.: DHT11/DHT22)
-          </button>
+          </Button>
         )}
       </div>
     </div>
   )
 }
-
-export default EditorMedidas

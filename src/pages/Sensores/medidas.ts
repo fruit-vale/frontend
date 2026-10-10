@@ -1,6 +1,11 @@
 // Regras dos dados que um sensor envia (mesmas da API em src/sensores/medidas.ts)
 
-import { UNIDADE_PADRAO, type Medida, type TipoMedida } from './tipos'
+import {
+  UNIDADE_PADRAO,
+  type Medida,
+  type MedidaPayload,
+  type TipoMedida,
+} from '@/types/sensor'
 
 /** Linha em edição: id só existe para dados já salvos. */
 export type MedidaRascunho = {
@@ -45,7 +50,7 @@ export const paraRascunho = (m: Medida): MedidaRascunho => ({
 })
 
 /** Corpo enviado à API (POST /sensores e PATCH /sensores/:id/medidas). */
-export const paraApi = (lista: MedidaRascunho[]) =>
+export const paraApi = (lista: MedidaRascunho[]): MedidaPayload[] =>
   lista.map(({ id, nome, tipo, unidade, chave }) => ({
     ...(id !== undefined && { id }),
     nome: nome.trim(),

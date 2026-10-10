@@ -1,7 +1,24 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { apiFetch } from '../../lib/api'
-import { nomeCultura, type CulturaResumo, type Lote, type Safra } from './tipos'
+import { PencilIcon, Trash2Icon } from 'lucide-react'
+import { toast } from 'sonner'
+import { getErrorMessage } from '@/api'
+import { EmptyState, ErrorMessage, Hint } from '@/components/shared/EmptyState'
+import { FormActions } from '@/components/shared/FormActions'
+import { FormField, FormGrid } from '@/components/shared/FormField'
+import { SelectField } from '@/components/shared/SelectField'
+import { StatusBadge } from '@/components/shared/StatusBadge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Textarea } from '@/components/ui/textarea'
+import { useAction } from '@/hooks/use-action'
+import { useConfirm } from '@/hooks/use-confirm'
+import { useRequest } from '@/hooks/use-request'
+import { formatarData, formatarNumero, numeroOuNull } from '@/lib/format'
+import { lotesService } from '@/services'
+import { nomeCultura, type CulturaResumo } from '@/types/cultura'
+import type { Lote, Safra } from '@/types/lote'
 
 type Props = {
   lote: Lote
@@ -21,9 +38,11 @@ type Formulario =
 const UNIDADES = ['kg', 't', 'caixas', 'sacas', 'unidades']
 const hoje = () => new Date().toISOString().slice(0, 10)
 
-const formatarData = (iso: string | null) =>
-  iso ? new Date(`${iso}T12:00:00`).toLocaleDateString('pt-BR') : '—'
-const numero = (valor: number) => valor.toLocaleString('pt-BR', { maximumFractionDigits: 2 })
+const TITULOS = {
+  colheita: 'Registrar colheita da safra atual',
+  nova: 'Iniciar nova safra',
+  editar: 'Corrigir safra',
+} as const
 
 /** Campos compartilhados pelos formulários de colheita, nova safra e edição. */
 type Campos = {
@@ -59,34 +78,26 @@ const camposDaSafra = (s: Safra): Campos => ({
   situacao: 'EM_CULTIVO',
 })
 
-const numeroOuNull = (texto: string) => {
-  const limpo = texto.replace(',', '.').trim()
-  return limpo === '' ? null : Number(limpo)
-}
-
 /** Linha do tempo das safras do lote, com colheita e início de nova safra. */
-function HistoricoLote({ lote, culturas, podeEditar, onLoteAlterado }: Props) {
-  const [safras, setSafras] = useState<Safra[] | null>(null)
-  const [erro, setErro] = useState('')
+export function HistoricoLote({ lote, culturas, podeEditar, onLoteAlterado }: Props) {
+  const confirm = useConfirm()
   const [formulario, setFormulario] = useState<Formulario>({ tipo: 'nenhum' })
   const [campos, setCampos] = useState<Campos>(camposVazios)
-  const [erroForm, setErroForm] = useState('')
-  const [salvando, setSalvando] = useState(false)
+  const [erroLocal, setErroLocal] = useState('')
+  const { run, pending, error, clearError } = useAction()
 
-  const carregar = useCallback(() => {
-    apiFetch<Safra[]>(`/lotes/${lote.id}/safras`)
-      .then(setSafras)
-      .catch((error: Error) => setErro(`Não foi possível carregar o histórico: ${error.message}`))
-  }, [lote.id])
-
-  useEffect(carregar, [carregar])
+  const { data: safras, error: erro, reload } = useRequest(
+    (signal) => lotesService.listarSafras(lote.id, signal),
+    { key: lote.id, errorPrefix: 'Não foi possível carregar o histórico' },
+  )
 
   // culturas da plataforma e da empresa do lote
   const culturasDoLote = culturas.filter((c) => !c.empresa || c.empresa.id === lote.empresa.id)
 
   function abrir(novo: Formulario) {
     setCampos(novo.tipo === 'editar' ? camposDaSafra(novo.safra) : camposVazios())
-    setErroForm('')
+    setErroLocal('')
+    clearError()
     setFormulario(novo)
   }
 
@@ -102,225 +113,254 @@ function HistoricoLote({ lote, culturas, podeEditar, onLoteAlterado }: Props) {
     event.preventDefault()
     if (formulario.tipo === 'nenhum') return
     if (formulario.tipo !== 'colheita' && !campos.cultura_id)
-      return setErroForm('Selecione a cultura.')
+      return setErroLocal('Selecione a cultura.')
+    setErroLocal('')
 
     const producao = numeroOuNull(campos.producao)
-    const [caminho, metodo, corpo] =
-      formulario.tipo === 'colheita'
-        ? [`/lotes/${lote.id}/safras/colheita`, 'POST', {
-            data_colheita: campos.data_colheita,
-            producao,
-            unidade_producao: campos.unidade_producao,
-            observacoes: campos.observacoes || null,
-          }]
-        : formulario.tipo === 'nova'
-          ? [`/lotes/${lote.id}/safras`, 'POST', {
-              cultura_id: Number(campos.cultura_id),
-              data_plantio: campos.data_plantio || null,
-              previsao_colheita: campos.previsao_colheita || null,
-              situacao: campos.situacao,
-              observacoes: campos.observacoes || null,
-            }]
-          : [`/lotes/${lote.id}/safras/${formulario.safra.id}`, 'PATCH', {
-              cultura_id: Number(campos.cultura_id),
-              data_plantio: campos.data_plantio || null,
-              previsao_colheita: campos.previsao_colheita || null,
-              data_colheita: formulario.safra.em_andamento ? null : campos.data_colheita || null,
-              producao: formulario.safra.em_andamento ? null : producao,
-              unidade_producao: campos.unidade_producao,
-              observacoes: campos.observacoes || null,
-            }]
+    const observacoes = campos.observacoes || null
 
-    setErroForm('')
-    setSalvando(true)
-    try {
-      await apiFetch<Safra>(caminho, { method: metodo, body: JSON.stringify(corpo) })
+    const salva = await run(() => {
+      if (formulario.tipo === 'colheita')
+        return lotesService.registrarColheita(lote.id, {
+          data_colheita: campos.data_colheita,
+          producao,
+          unidade_producao: campos.unidade_producao,
+          observacoes,
+        })
+      if (formulario.tipo === 'nova')
+        return lotesService.iniciarSafra(lote.id, {
+          cultura_id: Number(campos.cultura_id),
+          data_plantio: campos.data_plantio || null,
+          previsao_colheita: campos.previsao_colheita || null,
+          situacao: campos.situacao,
+          observacoes,
+        })
+      const emAndamento = formulario.safra.em_andamento
+      return lotesService.atualizarSafra(lote.id, formulario.safra.id, {
+        cultura_id: Number(campos.cultura_id),
+        data_plantio: campos.data_plantio || null,
+        previsao_colheita: campos.previsao_colheita || null,
+        data_colheita: emAndamento ? null : campos.data_colheita || null,
+        producao: emAndamento ? null : producao,
+        unidade_producao: campos.unidade_producao,
+        observacoes,
+      })
+    })
+
+    if (salva) {
       setFormulario({ tipo: 'nenhum' })
-      carregar()
+      reload()
       // colheita, nova safra ou edição da atual mudam o que o card mostra
       onLoteAlterado()
-    } catch (error) {
-      setErroForm(error instanceof Error ? error.message : 'Erro ao salvar.')
-    } finally {
-      setSalvando(false)
+      toast.success('Safra salva.')
     }
   }
 
   async function excluir(safra: Safra) {
-    if (!window.confirm(`Excluir a safra de ${nomeCultura(safra.cultura)} colhida em ${formatarData(safra.data_colheita)}?`))
-      return
+    const confirmado = await confirm({
+      title: 'Excluir esta safra?',
+      description: `${nomeCultura(safra.cultura)}, colhida em ${formatarData(safra.data_colheita)}.`,
+      confirmLabel: 'Excluir',
+      destructive: true,
+    })
+    if (!confirmado) return
+
     try {
-      await apiFetch<void>(`/lotes/${lote.id}/safras/${safra.id}`, { method: 'DELETE' })
-      carregar()
+      await lotesService.excluirSafra(lote.id, safra.id)
+      reload()
       onLoteAlterado()
-    } catch (error) {
-      setErro(error instanceof Error ? error.message : 'Erro ao excluir.')
+      toast.success('Safra excluída.')
+    } catch (e) {
+      toast.error(getErrorMessage(e, 'Erro ao excluir.'))
     }
   }
 
   const editandoAtual = formulario.tipo === 'editar' && formulario.safra.em_andamento
   const mostraCultura = formulario.tipo === 'nova' || formulario.tipo === 'editar'
-  const mostraColheita = formulario.tipo === 'colheita' || (formulario.tipo === 'editar' && !editandoAtual)
-  const titulos = {
-    colheita: 'Registrar colheita da safra atual',
-    nova: 'Iniciar nova safra',
-    editar: 'Corrigir safra',
-  } as const
+  const mostraColheita =
+    formulario.tipo === 'colheita' || (formulario.tipo === 'editar' && !editandoAtual)
 
   return (
-    <div className="historico-lote">
+    <div className="flex flex-col gap-5">
       {podeEditar && formulario.tipo === 'nenhum' && (
-        <div className="historico-lote__acoes">
+        <div>
           {lote.safra_atual_id ? (
-            <button type="button" className="btn-primary" onClick={() => abrir({ tipo: 'colheita' })}>
+            <Button size="lg" onClick={() => abrir({ tipo: 'colheita' })}>
               Registrar colheita
-            </button>
+            </Button>
           ) : (
-            <button type="button" className="btn-primary" onClick={() => abrir({ tipo: 'nova' })}>
+            <Button size="lg" onClick={() => abrir({ tipo: 'nova' })}>
               Iniciar nova safra
-            </button>
+            </Button>
           )}
         </div>
       )}
 
       {formulario.tipo !== 'nenhum' && (
-        <form className="form-card historico-lote__form" onSubmit={enviar} noValidate>
-          <h2>{titulos[formulario.tipo]}</h2>
+        <form
+          className="flex flex-col gap-4 rounded-xl border bg-muted/30 p-4"
+          onSubmit={enviar}
+          noValidate
+        >
+          <h3 className="font-heading text-base font-semibold">{TITULOS[formulario.tipo]}</h3>
 
           {mostraCultura && (
-            <div className="form-grid">
-              <label className="form-field">
-                <span>Cultura *</span>
-                <select {...campo('cultura_id')}>
-                  <option value="">Selecione...</option>
-                  {culturasDoLote.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {nomeCultura(c)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="form-field">
-                <span>Data de plantio</span>
-                <input type="date" {...campo('data_plantio')} />
-              </label>
-              <label className="form-field">
-                <span>Previsão de colheita</span>
-                <input type="date" {...campo('previsao_colheita')} min={campos.data_plantio || undefined} />
-              </label>
+            <FormGrid>
+              <FormField label="Cultura" htmlFor="h-cultura" required>
+                <SelectField
+                  id="h-cultura"
+                  value={campos.cultura_id}
+                  onValueChange={(v) => setCampos((c) => ({ ...c, cultura_id: v }))}
+                  options={culturasDoLote.map((c) => ({
+                    value: String(c.id),
+                    label: nomeCultura(c),
+                  }))}
+                />
+              </FormField>
+              <FormField label="Data de plantio" htmlFor="h-plantio">
+                <Input id="h-plantio" type="date" {...campo('data_plantio')} />
+              </FormField>
+              <FormField label="Previsão de colheita" htmlFor="h-previsao">
+                <Input
+                  id="h-previsao"
+                  type="date"
+                  {...campo('previsao_colheita')}
+                  min={campos.data_plantio || undefined}
+                />
+              </FormField>
               {formulario.tipo === 'nova' && (
-                <label className="form-field">
-                  <span>Situação</span>
-                  <select {...campo('situacao')}>
-                    <option value="EM_PREPARO">Em preparo</option>
-                    <option value="EM_CULTIVO">Em cultivo</option>
-                  </select>
-                </label>
+                <FormField label="Situação" htmlFor="h-situacao">
+                  <SelectField
+                    id="h-situacao"
+                    value={campos.situacao}
+                    onValueChange={(v) =>
+                      setCampos((c) => ({ ...c, situacao: v as Campos['situacao'] }))
+                    }
+                    options={[
+                      { value: 'EM_PREPARO', label: 'Em preparo' },
+                      { value: 'EM_CULTIVO', label: 'Em cultivo' },
+                    ]}
+                  />
+                </FormField>
               )}
-            </div>
+            </FormGrid>
           )}
 
           {mostraColheita && (
-            <div className="form-grid">
-              <label className="form-field">
-                <span>Data de colheita *</span>
-                <input type="date" {...campo('data_colheita')} max={hoje()} />
-              </label>
-              <label className="form-field">
-                <span>Produção colhida</span>
-                <input type="number" min={0} step="0.01" placeholder="ex.: 12500" {...campo('producao')} />
-              </label>
-              <label className="form-field">
-                <span>Unidade</span>
-                <input list="unidades-producao" maxLength={20} {...campo('unidade_producao')} />
+            <FormGrid>
+              <FormField label="Data de colheita" htmlFor="h-colheita" required>
+                <Input id="h-colheita" type="date" {...campo('data_colheita')} max={hoje()} />
+              </FormField>
+              <FormField label="Produção colhida" htmlFor="h-producao">
+                <Input
+                  id="h-producao"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  placeholder="ex.: 12500"
+                  {...campo('producao')}
+                />
+              </FormField>
+              <FormField label="Unidade" htmlFor="h-unidade">
+                <Input
+                  id="h-unidade"
+                  list="unidades-producao"
+                  maxLength={20}
+                  {...campo('unidade_producao')}
+                />
                 <datalist id="unidades-producao">
                   {UNIDADES.map((u) => (
                     <option key={u} value={u} />
                   ))}
                 </datalist>
-              </label>
-            </div>
+              </FormField>
+            </FormGrid>
           )}
 
-          <label className="form-field">
-            <span>Observações</span>
-            <textarea rows={2} maxLength={2000} {...campo('observacoes')} />
-          </label>
+          <FormField label="Observações" htmlFor="h-obs">
+            <Textarea id="h-obs" rows={2} maxLength={2000} {...campo('observacoes')} />
+          </FormField>
 
-          {erroForm && (
-            <p className="form-error" role="alert">
-              {erroForm}
-            </p>
-          )}
+          <ErrorMessage message={erroLocal || error} />
 
-          <div className="form-actions">
-            <button type="submit" className="btn-primary" disabled={salvando}>
-              {salvando ? 'Salvando...' : 'Salvar'}
-            </button>
-            <button type="button" className="btn-secondary" onClick={() => setFormulario({ tipo: 'nenhum' })}>
-              Cancelar
-            </button>
-          </div>
+          <FormActions
+            submitLabel="Salvar"
+            pending={pending}
+            onCancel={() => setFormulario({ tipo: 'nenhum' })}
+          />
         </form>
       )}
 
-      {erro && (
-        <p className="form-error" role="alert">
-          {erro}
-        </p>
-      )}
-
-      {safras === null && !erro && <p className="form-hint">Carregando histórico...</p>}
-      {safras?.length === 0 && <p className="empty-state">Nenhuma safra registrada.</p>}
+      <ErrorMessage message={erro} />
+      {safras === undefined && !erro && <Skeleton className="h-32 w-full" />}
+      {safras?.length === 0 && <EmptyState>Nenhuma safra registrada.</EmptyState>}
 
       {safras && safras.length > 0 && (
-        <ol className="historico-lote__linha">
+        <ol className="flex flex-col gap-3 border-l-2 border-border pl-4">
           {safras.map((s) => (
-            <li key={s.id} className={s.em_andamento ? 'safra safra--andamento' : 'safra'}>
-              <div className="safra__cabecalho">
+            <li
+              key={s.id}
+              className="relative rounded-xl bg-card p-4 ring-1 ring-foreground/10 before:absolute before:top-5 before:-left-[1.4rem] before:size-2.5 before:rounded-full before:bg-border data-[andamento=true]:before:bg-primary"
+              data-andamento={s.em_andamento}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <strong>{nomeCultura(s.cultura)}</strong>
-                <span className={s.em_andamento ? 'safra__status safra__status--andamento' : 'safra__status'}>
-                  {s.em_andamento ? 'Em andamento' : `Colhida em ${formatarData(s.data_colheita)}`}
-                </span>
+                <StatusBadge tone={s.em_andamento ? 'success' : 'neutral'}>
+                  {s.em_andamento
+                    ? 'Em andamento'
+                    : `Colhida em ${formatarData(s.data_colheita)}`}
+                </StatusBadge>
               </div>
 
-              <dl className="safra__dados">
-                <div>
-                  <dt>Plantio</dt>
-                  <dd>{formatarData(s.data_plantio)}</dd>
-                </div>
-                <div>
-                  <dt>{s.em_andamento ? 'Colheita prevista' : 'Previsão era'}</dt>
-                  <dd>{formatarData(s.previsao_colheita)}</dd>
-                </div>
-                <div>
-                  <dt>{s.em_andamento ? 'Há' : 'Duração'}</dt>
-                  <dd>{s.duracao_dias !== null ? `${s.duracao_dias} dias` : '—'}</dd>
-                </div>
+              <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-4">
+                <Dado rotulo="Plantio" valor={formatarData(s.data_plantio)} />
+                <Dado
+                  rotulo={s.em_andamento ? 'Colheita prevista' : 'Previsão era'}
+                  valor={formatarData(s.previsao_colheita)}
+                />
+                <Dado
+                  rotulo={s.em_andamento ? 'Há' : 'Duração'}
+                  valor={s.duracao_dias !== null ? `${s.duracao_dias} dias` : '—'}
+                />
                 {!s.em_andamento && (
-                  <div>
-                    <dt>Produção</dt>
-                    <dd>
-                      {s.producao !== null ? `${numero(s.producao)} ${s.unidade_producao ?? ''}` : '—'}
-                      {s.produtividade !== null && (
-                        <small> · {numero(s.produtividade)} {s.unidade_producao}/ha</small>
-                      )}
-                    </dd>
-                  </div>
+                  <Dado
+                    rotulo="Produção"
+                    valor={
+                      <>
+                        {s.producao !== null
+                          ? `${formatarNumero(s.producao)} ${s.unidade_producao ?? ''}`
+                          : '—'}
+                        {s.produtividade !== null && (
+                          <small className="block text-xs font-normal text-muted-foreground">
+                            {formatarNumero(s.produtividade)} {s.unidade_producao}/ha
+                          </small>
+                        )}
+                      </>
+                    }
+                  />
                 )}
               </dl>
 
-              {s.observacoes && <p className="safra__obs">{s.observacoes}</p>}
+              {s.observacoes && (
+                <Hint className="mt-2 text-sm">{s.observacoes}</Hint>
+              )}
 
               {podeEditar && formulario.tipo === 'nenhum' && (
-                <div className="safra__acoes">
-                  <button type="button" onClick={() => abrir({ tipo: 'editar', safra: s })}>
+                <div className="mt-3 flex gap-1">
+                  <Button variant="ghost" size="sm" onClick={() => abrir({ tipo: 'editar', safra: s })}>
+                    <PencilIcon />
                     Corrigir
-                  </button>
+                  </Button>
                   {!s.em_andamento && (
-                    <button type="button" className="safra__excluir" onClick={() => excluir(s)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive"
+                      onClick={() => excluir(s)}
+                    >
+                      <Trash2Icon />
                       Excluir
-                    </button>
+                    </Button>
                   )}
                 </div>
               )}
@@ -332,4 +372,11 @@ function HistoricoLote({ lote, culturas, podeEditar, onLoteAlterado }: Props) {
   )
 }
 
-export default HistoricoLote
+function Dado({ rotulo, valor }: { rotulo: string; valor: React.ReactNode }) {
+  return (
+    <div>
+      <dt className="text-xs text-muted-foreground">{rotulo}</dt>
+      <dd className="font-medium">{valor}</dd>
+    </div>
+  )
+}

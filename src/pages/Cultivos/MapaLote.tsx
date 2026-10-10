@@ -1,66 +1,61 @@
 import { useState } from 'react'
-import MapaNasa from '../../components/MapaNasa/MapaNasa'
-import SeletorImagem from '../../components/MapaNasa/SeletorImagem'
-import { poligonoParaRetangulo } from '../../lib/geo'
-import type { ImagemDisponivel } from '../../lib/nasa'
-import type { Lote } from './tipos'
+import { ImageryControls } from '@/components/map/ImageryControls'
+import MapaNasa, { type LoteNoMapa } from '@/components/map/MapaNasa'
+import { Hint } from '@/components/shared/EmptyState'
+import { formatarHectares } from '@/lib/format'
+import { areaPoligonoHa, centroPoligono, perimetroM } from '@/lib/geo'
+import type { ImagemDisponivel } from '@/services/nasa.service'
+import type { Lote } from '@/types/lote'
 
 /** Visualização do lote sobre a imagem da NASA, com escolha da data. */
-function MapaLote({ lote }: { lote: Lote }) {
+export function MapaLote({ lote, lotes }: { lote: Lote; lotes: Lote[] }) {
   const [imagem, setImagem] = useState<ImagemDisponivel | null>(null)
   const [referencias, setReferencias] = useState(true)
 
-  const retangulo = lote.geometria ? poligonoParaRetangulo(lote.geometria) : null
-  const centro =
-    retangulo ??
-    (lote.propriedade.latitude != null && lote.propriedade.longitude != null
+  const centro = lote.geometria
+    ? centroPoligono(lote.geometria)
+    : lote.propriedade.latitude != null && lote.propriedade.longitude != null
       ? { lat: lote.propriedade.latitude, lng: lote.propriedade.longitude }
-      : null)
+      : null
+  const vizinhos: LoteNoMapa[] = lotes
+    .filter((l) => l.propriedade.id === lote.propriedade.id && l.id !== lote.id && l.geometria)
+    .map((l) => ({ id: l.id, nome: l.nome_identificacao, poligono: l.geometria! }))
 
   return (
-    <div className="lote-mapa lote-mapa--leitura">
+    <div className="flex flex-col gap-3">
       {!lote.geometria && (
-        <p className="form-hint">
+        <Hint>
           Este lote ainda não foi marcado no mapa. Edite o lote para desenhar o
-          retângulo.
-        </p>
+          contorno.
+        </Hint>
       )}
 
       <MapaNasa
+        className="h-[28rem]"
         centro={centro}
         poligono={lote.geometria}
+        lotes={vizinhos}
         imagem={imagem}
         referencias={referencias}
       />
 
-      {retangulo && (
-        <p className="lote-mapa__area">
-          {retangulo.largura} m × {retangulo.comprimento} m · rotação{' '}
-          {retangulo.rotacao}° ·{' '}
-          <strong>{lote.area_ha?.toLocaleString('pt-BR')} ha</strong>
+      {lote.geometria && (
+        <p className="text-sm text-muted-foreground">
+          {lote.geometria.coordinates[0].length - 1} cantos · perímetro{' '}
+          {Math.round(perimetroM(lote.geometria)).toLocaleString('pt-BR')} m ·{' '}
+          <strong className="text-foreground">
+            {formatarHectares(lote.area_ha ?? areaPoligonoHa(lote.geometria))}
+          </strong>
         </p>
       )}
 
-      <div className="lote-mapa__imagens">
-        <label className="lote-mapa__referencias">
-          <input
-            type="checkbox"
-            checked={referencias}
-            onChange={(event) => setReferencias(event.target.checked)}
-          />
-          Estradas e limites
-        </label>
-        {centro && (
-          <SeletorImagem
-            lat={centro.lat}
-            lng={centro.lng}
-            selecionada={imagem}
-            onSelecionar={setImagem}
-          />
-        )}
-      </div>
+      <ImageryControls
+        centro={centro}
+        imagem={imagem}
+        onImagemChange={setImagem}
+        referencias={referencias}
+        onReferenciasChange={setReferencias}
+      />
     </div>
   )
 }
-
-export default MapaLote

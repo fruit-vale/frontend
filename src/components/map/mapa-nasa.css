@@ -1,0 +1,85 @@
+.mapa-nasa {
+  width: 100%;
+
+  border: 1px solid var(--border);
+  border-radius: 12px;
+
+  background-color: #0b1020;
+  overflow: hidden;
+}
+
+/* pixels de 30 m ampliados sem suavização (também durante a animação de zoom),
+   para não parecer mais nítido do que é */
+.mapa-nasa .leaflet-tile {
+  image-rendering: pixelated;
+}
+
+.mapa-nasa__lote {
+  stroke: #ffd23f;
+  fill: #ffd23f;
+  fill-opacity: 0.18;
+}
+
+/* outros lotes: tracejado discreto ao desenhar (referência) */
+.mapa-nasa__vizinho {
+  stroke: #ffffff;
+  stroke-opacity: 0.85;
+  stroke-dasharray: 4 4;
+  fill: #ffffff;
+  fill-opacity: 0.08;
+}
+
+/* visão geral: cada lote clicável */
+.mapa-nasa__vizinho--clicavel {
+  stroke: #ffd23f;
+  stroke-dasharray: none;
+  fill: #ffd23f;
+  fill-opacity: 0.2;
+  cursor: pointer;
+}
+
+.mapa-nasa__vizinho--clicavel:hover {
+  fill-opacity: 0.38;
+}
+
+.mapa-nasa .mapa-nasa__rotulo {
+  padding: 2px 7px;
+
+  border: none;
+  border-radius: 6px;
+  background-color: rgba(8, 6, 13, 0.72);
+  box-shadow: none;
+
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.mapa-nasa .mapa-nasa__rotulo::before {
+  display: none;
+}
+
+/* vértices do Geoman no tom do lote */
+.mapa-nasa .marker-icon {
+  border-color: #4b24ba;
+}
+
+.mapa-nasa .marker-icon-middle {
+  opacity: 0.8;
+}
+
+.mapa-nasa__contorno {
+  stroke: #ffffff;
+  stroke-dasharray: 6 5;
+  stroke-opacity: 0.9;
+}
+
+.mapa-nasa__centro {
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+
+  background-color: #4b24ba;
+  box-shadow: 0 0 0 2px rgba(8, 6, 13, 0.4);
+
+  cursor: grab;
+}

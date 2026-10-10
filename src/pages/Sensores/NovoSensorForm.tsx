@@ -1,10 +1,16 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { apiFetch } from '../../lib/api'
-import type { Credenciais } from './CredenciaisSensor'
-import EditorMedidas from './EditorMedidas'
+import { ErrorMessage, Hint } from '@/components/shared/EmptyState'
+import { FormActions } from '@/components/shared/FormActions'
+import { FormField, FormGrid } from '@/components/shared/FormField'
+import { SelectField } from '@/components/shared/SelectField'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { useAction } from '@/hooks/use-action'
+import { sensoresService } from '@/services'
+import type { Credenciais, LoteResumo, Sensor } from '@/types/sensor'
+import { EditorMedidas } from './EditorMedidas'
 import { paraApi, validarMedidas, type MedidaRascunho } from './medidas'
-import type { LoteResumo, Sensor } from './tipos'
 
 // mesmas regras da API (POST /sensores); o código final é empN-identificador
 const IDENTIFICADOR_VALIDO = /^[A-Za-z0-9_.-]+$/
@@ -19,14 +25,14 @@ type Props = {
   onCancelar: () => void
 }
 
-function NovoSensorForm({ lotes, onCriado, onCancelar }: Props) {
+export function NovoSensorForm({ lotes, onCriado, onCancelar }: Props) {
   const [identificador, setIdentificador] = useState('')
   const [tipo, setTipo] = useState('')
   const [loteId, setLoteId] = useState(lotes.length === 1 ? String(lotes[0].id) : '')
   const [dataInstalacao, setDataInstalacao] = useState('')
   const [medidas, setMedidas] = useState<MedidaRascunho[]>([])
-  const [erro, setErro] = useState('')
-  const [salvando, setSalvando] = useState(false)
+  const [erroLocal, setErroLocal] = useState('')
+  const { run, pending, error } = useAction()
 
   const lote = lotes.find((l) => l.id === Number(loteId))
   const prefixo = lote ? `emp${lote.empresa.id}-` : 'empN-'
@@ -34,84 +40,57 @@ function NovoSensorForm({ lotes, onCriado, onCancelar }: Props) {
   const variasEmpresas = new Set(lotes.map((l) => l.empresa.id)).size > 1
   const codigo = `${prefixo}${identificador.trim() || 'identificador'}`
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function enviar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const valor = identificador.trim()
 
-    if (!IDENTIFICADOR_VALIDO.test(valor)) {
-      setErro('O identificador deve ter só letras, números, _ . -')
-      return
-    }
-    if (PREFIXO_RESERVADO.test(valor)) {
-      setErro('Não use o prefixo empN- — ele é adicionado automaticamente.')
-      return
-    }
-    if (!tipo.trim()) {
-      setErro('Informe o tipo do sensor.')
-      return
-    }
-    if (!lote) {
-      setErro('Selecione o lote do sensor.')
-      return
-    }
-    if (codigo.length > CODIGO_MAX) {
-      setErro(`O código final (${codigo}) deve ter até ${CODIGO_MAX} caracteres.`)
-      return
-    }
-    const erroMedidas = validarMedidas(medidas)
-    if (erroMedidas) {
-      setErro(erroMedidas)
-      return
-    }
+    const falha = !IDENTIFICADOR_VALIDO.test(valor)
+      ? 'O identificador deve ter só letras, números, _ . -'
+      : PREFIXO_RESERVADO.test(valor)
+        ? 'Não use o prefixo empN- — ele é adicionado automaticamente.'
+        : !tipo.trim()
+          ? 'Informe o tipo do sensor.'
+          : !lote
+            ? 'Selecione o lote do sensor.'
+            : codigo.length > CODIGO_MAX
+              ? `O código final (${codigo}) deve ter até ${CODIGO_MAX} caracteres.`
+              : validarMedidas(medidas)
+    if (falha || !lote) return setErroLocal(falha ?? '')
+    setErroLocal('')
 
-    setErro('')
-    setSalvando(true)
-    try {
-      const { sensor, credenciais } = await apiFetch<{
-        sensor: Sensor
-        credenciais: Credenciais
-      }>('/sensores', {
-        method: 'POST',
-        body: JSON.stringify({
-          identificador: valor,
-          tipo: tipo.trim(),
-          lote_id: lote.id,
-          data_instalacao: dataInstalacao || null,
-          medidas: paraApi(medidas),
-        }),
-      })
-      onCriado(sensor, credenciais)
-    } catch (error) {
-      setErro(error instanceof Error ? error.message : 'Erro ao salvar.')
-    } finally {
-      setSalvando(false)
-    }
+    const criado = await run(() =>
+      sensoresService.criar({
+        identificador: valor,
+        tipo: tipo.trim(),
+        lote_id: lote.id,
+        data_instalacao: dataInstalacao || null,
+        medidas: paraApi(medidas),
+      }),
+    )
+    if (criado) onCriado(criado.sensor, criado.credenciais)
   }
 
   if (lotes.length === 0) {
     return (
-      <div className="form-card">
-        <p className="form-error">
-          Nenhum lote disponível. Cadastre um lote em Cultivos e Lotes antes
-          de cadastrar sensores.
-        </p>
-        <div className="form-actions">
-          <button type="button" className="btn-secondary" onClick={onCancelar}>
+      <div className="flex flex-col gap-4">
+        <ErrorMessage message="Nenhum lote disponível. Cadastre um lote em Cultivos e Lotes antes de cadastrar sensores." />
+        <div>
+          <Button variant="outline" size="lg" onClick={onCancelar}>
             Fechar
-          </button>
+          </Button>
         </div>
       </div>
     )
   }
 
   return (
-    <form className="form-card" onSubmit={handleSubmit} noValidate>
-      <div className="form-grid">
-        <label className="form-field">
-          <span>Identificador *</span>
-          <input
+    <form className="flex flex-col gap-5" onSubmit={enviar} noValidate>
+      <FormGrid>
+        <FormField label="Identificador" htmlFor="identificador" required>
+          <Input
+            id="identificador"
             value={identificador}
-            onChange={(event) => setIdentificador(event.target.value)}
+            onChange={(e) => setIdentificador(e.target.value)}
             placeholder="estufa-01"
             maxLength={CODIGO_MAX}
             autoCapitalize="off"
@@ -120,13 +99,13 @@ function NovoSensorForm({ lotes, onCriado, onCancelar }: Props) {
             required
             autoFocus
           />
-        </label>
+        </FormField>
 
-        <label className="form-field">
-          <span>Tipo *</span>
-          <input
+        <FormField label="Tipo" htmlFor="tipo" required>
+          <Input
+            id="tipo"
             value={tipo}
-            onChange={(event) => setTipo(event.target.value)}
+            onChange={(e) => setTipo(e.target.value)}
             list="tipos-sensor"
             placeholder="DHT11"
             maxLength={50}
@@ -137,61 +116,55 @@ function NovoSensorForm({ lotes, onCriado, onCancelar }: Props) {
               <option key={sugestao} value={sugestao} />
             ))}
           </datalist>
-        </label>
+        </FormField>
 
-        <label className="form-field">
-          <span>Lote *</span>
-          <select value={loteId} onChange={(event) => setLoteId(event.target.value)}>
-            <option value="">Selecione...</option>
-            {lotes.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.nome_identificacao} — {l.propriedade.nome}
-                {variasEmpresas ? ` (${l.empresa.razao_social})` : ''}
-              </option>
-            ))}
-          </select>
-        </label>
+        <FormField label="Lote" htmlFor="lote" required>
+          <SelectField
+            id="lote"
+            value={loteId}
+            onValueChange={setLoteId}
+            options={lotes.map((l) => ({
+              value: String(l.id),
+              label: `${l.nome_identificacao} — ${l.propriedade.nome}${
+                variasEmpresas ? ` (${l.empresa.razao_social})` : ''
+              }`,
+            }))}
+          />
+        </FormField>
 
-        <label className="form-field">
-          <span>Data de instalação</span>
-          <input
+        <FormField label="Data de instalação" htmlFor="instalacao">
+          <Input
+            id="instalacao"
             type="date"
             value={dataInstalacao}
-            onChange={(event) => setDataInstalacao(event.target.value)}
+            onChange={(e) => setDataInstalacao(e.target.value)}
           />
-        </label>
-      </div>
+        </FormField>
+      </FormGrid>
 
-      <p className="form-hint">
-        Código do sensor (também o usuário MQTT): <code>{codigo}</code>. A
-        senha é gerada automaticamente.
-      </p>
+      <Hint>
+        Código do sensor (também o usuário MQTT):{' '}
+        <code className="rounded bg-muted px-1.5 py-0.5 font-mono">{codigo}</code>. A senha
+        é gerada automaticamente.
+      </Hint>
 
-      <fieldset className="sensor-medidas">
-        <legend>Dados que o sensor envia *</legend>
-        <p className="form-hint">
-          Dê um nome a cada dado e escolha o tipo. A chave é o nome do campo no
-          JSON que o sensor publica (ex.: {'{"temperatura": 25.3}'}).
-        </p>
+      <fieldset className="flex flex-col gap-3 rounded-xl border p-4">
+        <legend className="px-1 text-sm font-medium">Dados que o sensor envia *</legend>
+        <Hint>
+          Dê um nome a cada dado e escolha o tipo. A chave é o nome do campo no JSON que o
+          sensor publica (ex.: {'{"temperatura": 25.3}'}).
+        </Hint>
         <EditorMedidas medidas={medidas} onChange={setMedidas} />
       </fieldset>
 
-      {erro && (
-        <p className="form-error" role="alert">
-          {erro}
-        </p>
-      )}
+      <ErrorMessage message={erroLocal || error} />
 
-      <div className="form-actions">
-        <button type="submit" className="btn-primary" disabled={salvando}>
-          {salvando ? 'Cadastrando...' : 'Cadastrar sensor'}
-        </button>
-        <button type="button" className="btn-secondary" onClick={onCancelar}>
-          Cancelar
-        </button>
-      </div>
+      <FormActions
+        submitLabel="Cadastrar sensor"
+        pendingLabel="Cadastrando..."
+        pending={pending}
+        onCancel={onCancelar}
+      />
     </form>
   )
 }
-
-export default NovoSensorForm

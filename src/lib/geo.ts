@@ -1,4 +1,4 @@
-// Retângulo do lote (com rotação) <-> GeoJSON Polygon.
+// Contorno do lote em GeoJSON Polygon, e o retângulo pelos cantos do GPS.
 // Mesma aproximação local usada pela API em src/lotes/geometria.ts.
 
 const M_POR_GRAU_LAT = 110_540
@@ -45,33 +45,54 @@ export function retanguloParaPoligono(r: Retangulo): Poligono {
   return { type: 'Polygon', coordinates: [[...cantos, cantos[0]]] }
 }
 
-/** Inverso de retanguloParaPoligono, para editar um lote salvo. */
-export function poligonoParaRetangulo(p: Poligono): Retangulo {
-  const cantos = p.coordinates[0].slice(0, 4)
-  const lng = cantos.reduce((s, c) => s + c[0], 0) / 4
-  const lat = cantos.reduce((s, c) => s + c[1], 0) / 4
-  const mLng = mPorGrauLng(lat)
-  const [a, b, c] = cantos.map(([x, y]) => [
-    (x - lng) * mLng,
-    (y - lat) * M_POR_GRAU_LAT,
-  ])
-  const dx = b[0] - a[0]
-  const dy = b[1] - a[1]
-  return {
-    lat,
-    lng,
-    largura: Math.round(Math.hypot(dx, dy)),
-    comprimento: Math.round(Math.hypot(c[0] - b[0], c[1] - b[1])),
-    rotacao: Math.round((Math.atan2(dy, dx) * 180) / Math.PI),
-  }
+/** [lat, lng] de cada vértice (sem o fechamento), no formato do Leaflet. */
+export const verticesLeaflet = (p: Poligono) =>
+  p.coordinates[0].slice(0, -1).map(([lng, lat]) => [lat, lng] as [number, number])
+
+/** Polígono fechado a partir dos vértices do Leaflet (~1 cm de precisão). */
+export function poligonoDeVertices(vertices: { lat: number; lng: number }[]): Poligono {
+  const anel = vertices.map(
+    ({ lat, lng }): [number, number] => [Number(lng.toFixed(7)), Number(lat.toFixed(7))],
+  )
+  return { type: 'Polygon', coordinates: [[...anel, anel[0]]] }
 }
 
-export const areaHa = (r: Retangulo) =>
-  Math.round(((r.largura * r.comprimento) / 10_000) * 100) / 100
+/** Vértices em metros ao redor do centro (mesma projeção da API). */
+function emMetros(p: Poligono) {
+  const pontos = p.coordinates[0].slice(0, -1)
+  const lng0 = pontos.reduce((s, c) => s + c[0], 0) / pontos.length
+  const lat0 = pontos.reduce((s, c) => s + c[1], 0) / pontos.length
+  const mLng = mPorGrauLng(lat0)
+  return pontos.map(([lng, lat]) => [(lng - lng0) * mLng, (lat - lat0) * M_POR_GRAU_LAT])
+}
 
-/** [lat, lng] dos cantos, no formato do Leaflet. */
-export const cantosLeaflet = (p: Poligono) =>
-  p.coordinates[0].slice(0, 4).map(([lng, lat]) => [lat, lng] as [number, number])
+/** Área em hectares, como a API calcula (fórmula do laço). */
+export function areaPoligonoHa(p: Poligono) {
+  const xy = emMetros(p)
+  const dobro = xy.reduce(
+    (s, a, i) => s + a[0] * xy[(i + 1) % xy.length][1] - xy[(i + 1) % xy.length][0] * a[1],
+    0,
+  )
+  return Math.round((Math.abs(dobro) / 2 / 10_000) * 100) / 100
+}
+
+/** Perímetro em metros. */
+export function perimetroM(p: Poligono) {
+  const xy = emMetros(p)
+  return xy.reduce((s, a, i) => {
+    const b = xy[(i + 1) % xy.length]
+    return s + Math.hypot(b[0] - a[0], b[1] - a[1])
+  }, 0)
+}
+
+/** Média dos vértices: basta para centrar o mapa e buscar imagens. */
+export function centroPoligono(p: Poligono): { lat: number; lng: number } {
+  const pontos = p.coordinates[0].slice(0, -1)
+  return {
+    lat: pontos.reduce((s, c) => s + c[1], 0) / pontos.length,
+    lng: pontos.reduce((s, c) => s + c[0], 0) / pontos.length,
+  }
+}
 
 export type Coordenada = { lat: number; lng: number }
 /** Para que lado do segmento canto 1 → canto 2 fica a profundidade. */
@@ -115,23 +136,3 @@ export function retanguloDeCantos(
     rotacao,
   }
 }
-
-/** Inverso de retanguloDeCantos: um lado do retângulo e a profundidade. */
-export function cantosDeRetangulo(r: Retangulo) {
-  const [a, b] = retanguloParaPoligono(r).coordinates[0]
-  return {
-    c1: { lat: a[1], lng: a[0] },
-    c2: { lat: b[1], lng: b[0] },
-    profundidade: r.comprimento,
-    // retanguloParaPoligono percorre os cantos no sentido anti-horário
-    lado: 'esquerda' as Lado,
-  }
-}
-
-/** Arredonda para exibir nos campos de medidas (0,1 m e 0,1°). */
-export const arredondarRetangulo = (r: Retangulo): Retangulo => ({
-  ...r,
-  largura: Math.round(r.largura * 10) / 10,
-  comprimento: Math.round(r.comprimento * 10) / 10,
-  rotacao: Math.round(r.rotacao * 10) / 10,
-})

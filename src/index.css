@@ -1,207 +1,151 @@
-* {
-  box-sizing: border-box;
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Tema FruitVale: roxo da marca + dourado de destaque */
+:root {
+  --background: #faf9fc;
+  --foreground: #4d392b;
+  --card: #ffffff;
+  --card-foreground: #4d392b;
+  --popover: #ffffff;
+  --popover-foreground: #4d392b;
+  --primary: #4b24ba;
+  --primary-foreground: #ffffff;
+  --secondary: #eee9fb;
+  --secondary-foreground: #3d1d99;
+  --muted: #f3f1f7;
+  --muted-foreground: #6b6375;
+  --accent: #eee9fb;
+  --accent-foreground: #3d1d99;
+  --destructive: #c23b3b;
+  --success: #2a6e3f;
+  --success-soft: #e8f5ec;
+  --warning: #9a6b00;
+  --warning-soft: #fdf7e7;
+  --border: #e5e4e7;
+  --input: #dcd9e0;
+  --ring: #6a45dd;
+  --radius: 0.75rem;
+
+  /* paleta categórica dos gráficos, em ordem fixa (validada p/ daltonismo) */
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
+  --chart-3: #1baf7a;
+  --chart-4: #eda100;
+  --chart-5: #e87ba4;
+  --chart-6: #008300;
+  --chart-7: #4a3aa7;
+  --chart-8: #e34948;
+
+  --sidebar: #3a1d94;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #e0a83d;
+  --sidebar-primary-foreground: #2c1670;
+  --sidebar-accent: rgb(255 255 255 / 0.14);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgb(255 255 255 / 0.16);
+  --sidebar-ring: #e0a83d;
 }
 
-html,
-body,
-#root {
-  width: 100%;
-  min-height: 100%;
-  margin: 0;
-  padding: 0;
+.dark {
+  --background: #16121f;
+  --foreground: #f1ece4;
+  --card: #1f1a2b;
+  --card-foreground: #f1ece4;
+  --popover: #1f1a2b;
+  --popover-foreground: #f1ece4;
+  --primary: #8b6cf0;
+  --primary-foreground: #14102a;
+  --secondary: #2d2547;
+  --secondary-foreground: #ddd3ff;
+  --muted: #272134;
+  --muted-foreground: #a99fb8;
+  --accent: #2d2547;
+  --accent-foreground: #ddd3ff;
+  --destructive: #ef6b6b;
+  --success: #6fcf8e;
+  --success-soft: #16301f;
+  --warning: #f0c25a;
+  --warning-soft: #33290f;
+  --border: rgb(255 255 255 / 0.1);
+  --input: rgb(255 255 255 / 0.16);
+  --ring: #8b6cf0;
+
+  --chart-1: #5b9bf0;
+  --chart-2: #f58a5c;
+  --chart-3: #3cc99a;
+  --chart-4: #f2b92e;
+  --chart-5: #f09bbd;
+  --chart-6: #38b538;
+  --chart-7: #8f82e0;
+  --chart-8: #f26f6e;
+
+  --sidebar: #1c1330;
+  --sidebar-border: rgb(255 255 255 / 0.1);
 }
 
-body {
-  min-width: 320px;
-  font-family: Arial, Helvetica, sans-serif;
+@theme inline {
+  --font-sans: "Schibsted Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-heading: "Fraunces", Georgia, serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-chart-7: var(--chart-7);
+  --color-chart-8: var(--chart-8);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
-.empty-state {
-  margin: 0;
-  padding: 32px 16px;
-
-  border: 1px dashed #d8d0e3;
-  border-radius: 12px;
-
-  color: #6b6375;
-  font-size: 14px;
-  text-align: center;
-}
-
-/* FORMULÁRIOS DE CADASTRO */
-
-.form-card {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-
-  margin-bottom: 24px;
-  padding: 22px 24px;
-
-  background-color: #ffffff;
-  border: 1px solid #e5e4e7;
-  border-radius: 14px;
-
-  box-shadow: 0 4px 12px rgba(77, 57, 43, 0.05);
-}
-
-.form-card h2 {
-  margin: 0;
-  font-size: 17px;
-  color: #4d392b;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-}
-
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-
-  font-size: 13px;
-  font-weight: 500;
-  color: #6b6375;
-}
-
-.form-field input,
-.form-field select {
-  padding: 10px 12px;
-
-  border: 1px solid #e5e4e7;
-  border-radius: 9px;
-
-  font-size: 14px;
-  color: #4d392b;
-  background-color: #ffffff;
-}
-
-.form-field input:focus,
-.form-field select:focus {
-  outline: 2px solid #4b24ba;
-  outline-offset: -1px;
-}
-
-.form-field select:disabled {
-  background-color: #f6f5f8;
-  color: #9a93a3;
-}
-
-.form-error {
-  margin: 0;
-  padding: 10px 12px;
-
-  border-radius: 9px;
-  background-color: #fdecec;
-
-  font-size: 13px;
-  color: #a12a2a;
-}
-
-.form-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.btn-primary,
-.btn-secondary {
-  border-radius: 10px;
-  padding: 11px 18px;
-
-  font-size: 14px;
-  font-weight: 600;
-
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.btn-primary {
-  border: none;
-  background-color: #4b24ba;
-  color: #ffffff;
-}
-
-.btn-primary:hover {
-  background-color: #3d1d99;
-}
-
-.btn-primary:disabled {
-  opacity: 0.7;
-  cursor: wait;
-}
-
-.btn-secondary {
-  border: 1px solid #e5e4e7;
-  background-color: #ffffff;
-  color: #4d392b;
-}
-
-.btn-secondary:hover {
-  background-color: #faf9fc;
-}
-
-.form-hint {
-  margin: -6px 0 0;
-  font-size: 12.5px;
-  color: #6b6375;
-}
-
-/* FORMULÁRIOS COM MAPA: campos à esquerda, mapa à direita no desktop */
-
-.form-mapa {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
-  align-items: start;
-  gap: 24px;
-}
-
-.form-mapa__campos {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  min-width: 0;
-}
-
-/* acompanha a rolagem do modal enquanto os campos são preenchidos */
-.form-mapa__mapa {
-  position: sticky;
-  top: 0;
-
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-width: 0;
-}
-
-.form-mapa__mapa .mapa-nasa {
-  height: min(620px, calc(100vh - 220px));
-  min-height: 360px;
-}
-
-.form-mapa__mapa .form-hint {
-  margin: 0;
-}
-
-@media (max-width: 960px) {
-  .form-mapa {
-    grid-template-columns: 1fr;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
   }
-
-  .form-mapa__mapa {
-    position: static;
+  html {
+    @apply font-sans;
   }
-
-  .form-mapa__mapa .mapa-nasa {
-    height: 360px;
+  body {
+    @apply min-w-80 bg-background text-foreground antialiased;
+  }
+  h1,
+  h2 {
+    @apply font-heading;
   }
 }

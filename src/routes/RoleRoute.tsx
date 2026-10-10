@@ -1,19 +1,15 @@
 import { Navigate, Outlet } from 'react-router-dom'
-import type { Role } from '../auth/roles'
-import { useAuth } from '../auth/useAuth'
+import { ROUTES } from '@/config/routes'
+import { useAuth } from '@/hooks/use-auth'
+import type { Role } from '@/types/auth'
 
-type RoleRouteProps = {
-  allowed: Role[]
-}
-
-function RoleRoute({ allowed }: RoleRouteProps) {
+/** Só deixa passar os papéis permitidos; os demais voltam ao início. */
+export function RoleRoute({ allowed }: { allowed: Role[] }) {
   const { user } = useAuth()
 
   if (!user || !allowed.includes(user.role)) {
-    return <Navigate to="/" replace />
+    return <Navigate to={ROUTES.home} replace />
   }
 
   return <Outlet />
 }
-
-export default RoleRoute

@@ -1,13 +1,13 @@
-import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { apiFetch } from '../../lib/api'
-import {
-  listarEstados,
-  listarMunicipios,
-  type Estado,
-  type Municipio,
-} from '../../lib/ibge'
-import type { Empresa } from './Empresas'
+import { ErrorMessage } from '@/components/shared/EmptyState'
+import { FormActions } from '@/components/shared/FormActions'
+import { FormField, FormGrid } from '@/components/shared/FormField'
+import { LocalidadeFields } from '@/components/shared/LocalidadeFields'
+import { Input } from '@/components/ui/input'
+import { useAction } from '@/hooks/use-action'
+import { useForm } from '@/hooks/use-form'
+import { empresasService } from '@/services'
+import type { Empresa } from '@/types/empresa'
 
 const formVazio = {
   razao_social: '',
@@ -24,170 +24,63 @@ type Props = {
   onCancelar: () => void
 }
 
-function NovaEmpresaForm({ onCriada, onCancelar }: Props) {
-  const [form, setForm] = useState(formVazio)
-  const [erro, setErro] = useState('')
-  const [salvando, setSalvando] = useState(false)
+export function NovaEmpresaForm({ onCriada, onCancelar }: Props) {
+  const { values, set, field } = useForm(formVazio)
+  const { run, pending, error } = useAction()
 
-  const [estados, setEstados] = useState<Estado[] | null>(null)
-  const [erroEstados, setErroEstados] = useState(false)
-  // lista de cidades guardada junto da UF para saber se está atualizada
-  const [cidades, setCidades] = useState<{ uf: string; lista: Municipio[] }>()
-  const [erroCidadesUf, setErroCidadesUf] = useState('')
-
-  useEffect(() => {
-    listarEstados()
-      .then(setEstados)
-      .catch(() => setErroEstados(true))
-  }, [])
-
-  useEffect(() => {
-    if (!form.estado || erroEstados) return
-
-    let ativo = true
-    listarMunicipios(form.estado)
-      .then((lista) => ativo && setCidades({ uf: form.estado, lista }))
-      .catch(() => ativo && setErroCidadesUf(form.estado))
-
-    return () => {
-      ativo = false
-    }
-  }, [form.estado, erroEstados])
-
-  const cidadesDaUf = cidades?.uf === form.estado ? cidades.lista : null
-  const cidadeLivre = erroEstados || erroCidadesUf === form.estado
-  const carregandoCidades = !!form.estado && !cidadesDaUf && !cidadeLivre
-
-  function campo(nome: keyof typeof formVazio) {
-    return {
-      value: form[nome],
-      onChange: (event: { target: { value: string } }) =>
-        setForm((atual) => ({ ...atual, [nome]: event.target.value })),
-    }
-  }
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function enviar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setSalvando(true)
-
-    try {
-      const criada = await apiFetch<Empresa>('/empresas', {
-        method: 'POST',
-        body: JSON.stringify(form),
-      })
-      onCriada(criada)
-    } catch (error) {
-      setErro(error instanceof Error ? error.message : 'Erro ao salvar.')
-    } finally {
-      setSalvando(false)
-    }
+    const criada = await run(() => empresasService.criar(values))
+    if (criada) onCriada(criada)
   }
 
   return (
-    <form className="form-card" onSubmit={handleSubmit} noValidate>
-      <div className="form-grid">
-        <label className="form-field">
-          <span>Razão social *</span>
-          <input {...campo('razao_social')} maxLength={150} required autoFocus />
-        </label>
-        <label className="form-field">
-          <span>CNPJ *</span>
-          <input
-            {...campo('cpf_cnpj')}
+    <form className="flex flex-col gap-5" onSubmit={enviar} noValidate>
+      <FormGrid>
+        <FormField label="Razão social" htmlFor="razao_social" required>
+          <Input id="razao_social" {...field('razao_social')} maxLength={150} required autoFocus />
+        </FormField>
+        <FormField label="CNPJ" htmlFor="cpf_cnpj" required>
+          <Input
+            id="cpf_cnpj"
+            {...field('cpf_cnpj')}
             placeholder="00.000.000/0000-00"
             maxLength={18}
             autoCapitalize="characters"
             required
           />
-        </label>
-        <label className="form-field">
-          <span>Responsável</span>
-          <input {...campo('responsavel')} maxLength={100} />
-        </label>
-        <label className="form-field">
-          <span>E-mail</span>
-          <input {...campo('email')} type="email" maxLength={100} />
-        </label>
-        <label className="form-field">
-          <span>Telefone</span>
-          <input {...campo('telefone')} type="tel" maxLength={20} />
-        </label>
-      </div>
+        </FormField>
+        <FormField label="Responsável" htmlFor="responsavel">
+          <Input id="responsavel" {...field('responsavel')} maxLength={100} />
+        </FormField>
+        <FormField label="E-mail" htmlFor="email">
+          <Input id="email" {...field('email')} type="email" maxLength={100} />
+        </FormField>
+        <FormField label="Telefone" htmlFor="telefone">
+          <Input id="telefone" {...field('telefone')} type="tel" maxLength={20} />
+        </FormField>
+      </FormGrid>
 
-      <div className="form-grid">
-        <label className="form-field">
-          <span>Estado</span>
-          {erroEstados ? (
-            <input {...campo('estado')} maxLength={2} placeholder="UF (ex.: PE)" />
-          ) : (
-            <select
-              value={form.estado}
-              onChange={(event) =>
-                setForm((atual) => ({
-                  ...atual,
-                  estado: event.target.value,
-                  cidade: '',
-                }))
-              }
-              disabled={!estados}
-            >
-              <option value="">
-                {estados ? 'Selecione...' : 'Carregando estados...'}
-              </option>
-              {estados?.map((estado) => (
-                <option key={estado.sigla} value={estado.sigla}>
-                  {estado.nome}
-                </option>
-              ))}
-            </select>
-          )}
-        </label>
+      <FormGrid>
+        <LocalidadeFields
+          idPrefix="empresa"
+          estado={values.estado}
+          municipio={values.cidade}
+          onEstadoChange={(uf) => {
+            set('estado', uf)
+            set('cidade', '')
+          }}
+          onMunicipioChange={(nome) => set('cidade', nome)}
+        />
+      </FormGrid>
 
-        <label className="form-field">
-          <span>Cidade</span>
-          {cidadeLivre ? (
-            <input {...campo('cidade')} maxLength={100} />
-          ) : (
-            <select {...campo('cidade')} disabled={!cidadesDaUf}>
-              <option value="">
-                {!form.estado
-                  ? 'Selecione o estado primeiro'
-                  : carregandoCidades
-                    ? 'Carregando cidades...'
-                    : 'Selecione...'}
-              </option>
-              {cidadesDaUf?.map((municipio) => (
-                <option key={municipio.id} value={municipio.nome}>
-                  {municipio.nome}
-                </option>
-              ))}
-            </select>
-          )}
-        </label>
-      </div>
+      <ErrorMessage message={error} />
 
-      {cidadeLivre && (
-        <p className="form-hint">
-          Não foi possível carregar a lista do IBGE; digite manualmente.
-        </p>
-      )}
-
-      {erro && (
-        <p className="form-error" role="alert">
-          {erro}
-        </p>
-      )}
-
-      <div className="form-actions">
-        <button type="submit" className="btn-primary" disabled={salvando}>
-          {salvando ? 'Salvando...' : 'Cadastrar empresa'}
-        </button>
-        <button type="button" className="btn-secondary" onClick={onCancelar}>
-          Cancelar
-        </button>
-      </div>
+      <FormActions
+        submitLabel="Cadastrar empresa"
+        pending={pending}
+        onCancel={onCancelar}
+      />
     </form>
   )
 }
-
-export default NovaEmpresaForm
