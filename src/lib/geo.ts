@@ -136,3 +136,57 @@ export function retanguloDeCantos(
     rotacao,
   }
 }
+
+// ---- lote dentro da propriedade (mesma regra da API, em src/lotes/geometria.ts)
+
+/** vértice até esta distância da divisa conta como dentro (o mapa encaixa nela) */
+const TOLERANCIA_DIVISA_M = 1
+
+type Xy = [number, number]
+
+function projetar(p: Poligono, lng0: number, lat0: number): Xy[] {
+  const mLng = mPorGrauLng(lat0)
+  return p.coordinates[0]
+    .slice(0, -1)
+    .map(([lng, lat]): Xy => [(lng - lng0) * mLng, (lat - lat0) * M_POR_GRAU_LAT])
+}
+
+const orientacao = (a: Xy, b: Xy, c: Xy) =>
+  Math.sign((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]))
+
+/** Os segmentos ab e cd se cruzam de verdade (encostar não conta)? */
+function cruzam(a: Xy, b: Xy, c: Xy, d: Xy) {
+  const [o1, o2, o3, o4] = [orientacao(a, b, c), orientacao(a, b, d), orientacao(c, d, a), orientacao(c, d, b)]
+  return o1 !== o2 && o3 !== o4 && o1 !== 0 && o2 !== 0 && o3 !== 0 && o4 !== 0
+}
+
+function distanciaSegmento(p: Xy, a: Xy, b: Xy) {
+  const [dx, dy] = [b[0] - a[0], b[1] - a[1]]
+  const t = dx || dy ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy))) : 0
+  return Math.hypot(p[0] - (a[0] + t * dx), p[1] - (a[1] + t * dy))
+}
+
+function pontoDentro(p: Xy, anel: Xy[]) {
+  let dentro = false
+  for (let i = 0, j = anel.length - 1; i < anel.length; j = i++) {
+    const [a, b] = [anel[i], anel[j]]
+    if (distanciaSegmento(p, a, b) <= TOLERANCIA_DIVISA_M) return true
+    if (a[1] > p[1] !== b[1] > p[1] && p[0] < ((b[0] - a[0]) * (p[1] - a[1])) / (b[1] - a[1]) + a[0])
+      dentro = !dentro
+  }
+  return dentro
+}
+
+/** O polígono `interno` cabe no `externo` (pode encostar na divisa)? */
+export function poligonoDentro(interno: Poligono, externo: Poligono): boolean {
+  const [lng0, lat0] = externo.coordinates[0][0]
+  const de = projetar(interno, lng0, lat0)
+  const fora = projetar(externo, lng0, lat0)
+  if (!de.every((p) => pontoDentro(p, fora))) return false
+  for (let i = 0; i < de.length; i++) {
+    const [a, b] = [de[i], de[(i + 1) % de.length]]
+    if (!pontoDentro([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], fora)) return false
+    for (let j = 0; j < fora.length; j++) if (cruzam(a, b, fora[j], fora[(j + 1) % fora.length])) return false
+  }
+  return true
+}

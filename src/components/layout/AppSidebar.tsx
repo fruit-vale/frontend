@@ -1,5 +1,8 @@
+import { useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { Collapsible } from '@base-ui/react/collapsible'
 import {
+  ChevronDownIcon,
   LogOutIcon,
   MonitorIcon,
   MoonIcon,
@@ -12,7 +15,6 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -33,6 +35,25 @@ import { useTheme } from '@/hooks/use-theme'
 import { ROLE_LABELS } from '@/types/auth'
 import type { Theme } from '@/contexts/theme-context'
 
+// seções do menu abertas ou fechadas (só neste navegador)
+const CHAVE_SECOES = 'fruitvale:menu-secoes'
+
+function lerSecoes(): Record<string, boolean> {
+  try {
+    return JSON.parse(localStorage.getItem(CHAVE_SECOES) ?? '{}') as Record<string, boolean>
+  } catch {
+    return {}
+  }
+}
+
+function gravarSecoes(secoes: Record<string, boolean>) {
+  try {
+    localStorage.setItem(CHAVE_SECOES, JSON.stringify(secoes))
+  } catch {
+    // sem armazenamento: vale só nesta visita
+  }
+}
+
 const TEMAS: { value: Theme; label: string; icon: typeof SunIcon }[] = [
   { value: 'light', label: 'Claro', icon: SunIcon },
   { value: 'dark', label: 'Escuro', icon: MoonIcon },
@@ -45,6 +66,7 @@ export function AppSidebar() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const { isMobile, setOpenMobile } = useSidebar()
+  const [secoesAbertas, setSecoesAbertas] = useState(lerSecoes)
 
   const fecharNoCelular = () => isMobile && setOpenMobile(false)
   const ativo = (to: string, end?: boolean) =>
@@ -56,6 +78,15 @@ export function AppSidebar() {
         items: secao.items.filter((i) => i.roles.includes(user.role)),
       })).filter((secao) => secao.items.length > 0)
     : []
+
+  // o menu do administrador é longo: as seções começam fechadas, menos a da
+  // tela atual; para os outros perfis, que veem poucos itens, tudo aberto
+  const abertaPorPadrao = user?.role !== 'administrador'
+  function alternarSecao(titulo: string, aberta: boolean) {
+    const novas = { ...secoesAbertas, [titulo]: aberta }
+    setSecoesAbertas(novas)
+    gravarSecoes(novas)
+  }
 
   function sair() {
     logout()
@@ -84,18 +115,8 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        {secoes.map((secao) => (
-          <SidebarGroup key={secao.title ?? 'principal'}>
-            {secao.title && (
-              <SidebarGroupLabel className="flex-col items-start justify-center gap-0 py-1 text-[0.7rem] tracking-widest uppercase">
-                <span>{secao.title}</span>
-                {secao.adminHint && user?.role === 'administrador' && (
-                  <small className="text-[0.65rem] tracking-normal normal-case opacity-80">
-                    {secao.adminHint}
-                  </small>
-                )}
-              </SidebarGroupLabel>
-            )}
+        {secoes.map((secao) => {
+          const itens = (
             <SidebarMenu>
               {secao.items.map((item) => (
                 <SidebarMenuItem key={item.to}>
@@ -112,8 +133,51 @@ export function AppSidebar() {
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
-          </SidebarGroup>
-        ))}
+          )
+          // "Início" não tem título: fica sempre à mostra
+          if (!secao.title)
+            return <SidebarGroup key="principal">{itens}</SidebarGroup>
+
+          const titulo = secao.title
+          const temAtiva = secao.items.some((i) => ativo(i.to, i.end))
+          const aberta = secoesAbertas[titulo] ?? (abertaPorPadrao || temAtiva)
+          return (
+            <SidebarGroup key={titulo} className="py-1">
+              <Collapsible.Root
+                open={aberta}
+                onOpenChange={(abrir) => alternarSecao(titulo, abrir)}
+              >
+                <Collapsible.Trigger className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sidebar-foreground/70 outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring">
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="text-[0.7rem] font-medium tracking-widest uppercase">
+                      {titulo}
+                    </span>
+                    {secao.adminHint && user?.role === 'administrador' && (
+                      <small className="text-[0.65rem] opacity-80">{secao.adminHint}</small>
+                    )}
+                  </span>
+                  {/* fechada com a tela atual dentro: um ponto mostra onde você está */}
+                  {!aberta && temAtiva && (
+                    <span className="flex items-center gap-1 text-[0.65rem]">
+                      <span className="size-1.5 rounded-full bg-sidebar-primary" aria-hidden="true" />
+                      <span className="sr-only">contém a tela atual</span>
+                    </span>
+                  )}
+                  <span className="text-[0.65rem] tabular-nums opacity-70" aria-hidden="true">
+                    {secao.items.length}
+                  </span>
+                  <ChevronDownIcon
+                    className={`size-4 shrink-0 transition-transform duration-200 ${aberta ? '' : '-rotate-90'}`}
+                    aria-hidden="true"
+                  />
+                </Collapsible.Trigger>
+                <Collapsible.Panel className="h-[var(--collapsible-panel-height)] overflow-hidden pt-1 transition-[height] duration-200 ease-out data-[ending-style]:h-0 data-[starting-style]:h-0">
+                  {itens}
+                </Collapsible.Panel>
+              </Collapsible.Root>
+            </SidebarGroup>
+          )
+        })}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border">

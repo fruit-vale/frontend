@@ -76,6 +76,13 @@
   opacity: 0.8;
 }
 
+/* área da propriedade ao desenhar o lote: o desenho precisa ficar dentro */
+.mapa-nasa__limite {
+  stroke: #5eead4;
+  stroke-dasharray: 10 6;
+  stroke-opacity: 0.95;
+}
+
 .mapa-nasa__contorno {
   stroke: #ffffff;
   stroke-dasharray: 6 5;

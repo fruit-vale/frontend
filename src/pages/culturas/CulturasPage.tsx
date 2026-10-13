@@ -221,12 +221,6 @@ export default function CulturasPage() {
                     faixa(cultura.umidade_recomendada_min, cultura.umidade_recomendada_max, '%'),
                   ],
                   ['Ciclo', cultura.ciclo_medio_dias ? `${cultura.ciclo_medio_dias} dias` : '—'],
-                  [
-                    'Graus-dia',
-                    cultura.graus_dia_ciclo && cultura.temp_base_graus_dia !== null
-                      ? `${cultura.graus_dia_ciclo.toLocaleString('pt-BR')} (base ${cultura.temp_base_graus_dia} °C)`
-                      : '—',
-                  ],
                   ['Lotes', cultura.total_lotes],
                 ]}
               />

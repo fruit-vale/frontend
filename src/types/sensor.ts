@@ -34,6 +34,8 @@ export type Sensor = {
   /** dados que o sensor envia no JSON do MQTT */
   medidas: Medida[]
   total_leituras: number
+  /** data e hora da leitura mais recente (ISO); null se nunca enviou */
+  ultima_leitura: string | null
   acesso_mqtt: AcessoMqtt
 }
 
@@ -63,7 +65,6 @@ export type MedidaPayload = {
 
 export type NovoSensorPayload = {
   identificador: string
-  tipo: string
   lote_id: number
   data_instalacao: string | null
   medidas: MedidaPayload[]

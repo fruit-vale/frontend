@@ -17,8 +17,6 @@ const IDENTIFICADOR_VALIDO = /^[A-Za-z0-9_.-]+$/
 const PREFIXO_RESERVADO = /^emp\d+-/
 const CODIGO_MAX = 50
 
-const TIPOS_SUGERIDOS = ['DHT11', 'DHT22', 'Umidade do solo', 'pH', 'Luminosidade', 'Pluviômetro']
-
 type Props = {
   lotes: LoteResumo[]
   onCriado: (sensor: Sensor, credenciais: Credenciais) => void
@@ -29,7 +27,6 @@ export function NovoSensorForm({ lotes: todosLotes, onCriado, onCancelar }: Prop
   // a API só aceita sensor em lote em cultivo (nem em preparo, nem colhido)
   const lotes = todosLotes.filter((l) => l.situacao === 'EM_CULTIVO')
   const [identificador, setIdentificador] = useState('')
-  const [tipo, setTipo] = useState('')
   const [loteId, setLoteId] = useState(lotes.length === 1 ? String(lotes[0].id) : '')
   const [dataInstalacao, setDataInstalacao] = useState('')
   const [medidas, setMedidas] = useState<MedidaRascunho[]>([])
@@ -50,20 +47,17 @@ export function NovoSensorForm({ lotes: todosLotes, onCriado, onCancelar }: Prop
       ? 'O identificador deve ter só letras, números, _ . -'
       : PREFIXO_RESERVADO.test(valor)
         ? 'Não use o prefixo empN- — ele é adicionado automaticamente.'
-        : !tipo.trim()
-          ? 'Informe o tipo do sensor.'
-          : !lote
-            ? 'Selecione o lote do sensor.'
-            : codigo.length > CODIGO_MAX
-              ? `O código final (${codigo}) deve ter até ${CODIGO_MAX} caracteres.`
-              : validarMedidas(medidas)
+        : !lote
+          ? 'Selecione o lote do sensor.'
+          : codigo.length > CODIGO_MAX
+            ? `O código final (${codigo}) deve ter até ${CODIGO_MAX} caracteres.`
+            : validarMedidas(medidas)
     if (falha || !lote) return setErroLocal(falha ?? '')
     setErroLocal('')
 
     const criado = await run(() =>
       sensoresService.criar({
         identificador: valor,
-        tipo: tipo.trim(),
         lote_id: lote.id,
         data_instalacao: dataInstalacao || null,
         medidas: paraApi(medidas),
@@ -107,23 +101,6 @@ export function NovoSensorForm({ lotes: todosLotes, onCriado, onCancelar }: Prop
             required
             autoFocus
           />
-        </FormField>
-
-        <FormField label="Tipo" htmlFor="tipo" required>
-          <Input
-            id="tipo"
-            value={tipo}
-            onChange={(e) => setTipo(e.target.value)}
-            list="tipos-sensor"
-            placeholder="DHT11"
-            maxLength={50}
-            required
-          />
-          <datalist id="tipos-sensor">
-            {TIPOS_SUGERIDOS.map((sugestao) => (
-              <option key={sugestao} value={sugestao} />
-            ))}
-          </datalist>
         </FormField>
 
         <FormField label="Lote" htmlFor="lote" required hint="Só aparecem os lotes em cultivo.">

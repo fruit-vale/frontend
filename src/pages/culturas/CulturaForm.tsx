@@ -27,8 +27,6 @@ const paraForm = (c?: Cultura) => ({
   umidade_recomendada_min: texto(c?.umidade_recomendada_min ?? null),
   umidade_recomendada_max: texto(c?.umidade_recomendada_max ?? null),
   ciclo_medio_dias: texto(c?.ciclo_medio_dias ?? null),
-  temp_base_graus_dia: texto(c?.temp_base_graus_dia ?? null),
-  graus_dia_ciclo: texto(c?.graus_dia_ciclo ?? null),
   descricao: c?.descricao ?? '',
 })
 
@@ -65,8 +63,9 @@ export function CulturaForm({ cultura, empresas, onSalva, onCancelar }: Props) {
       umidade_recomendada_min: numeroOuNull(values.umidade_recomendada_min),
       umidade_recomendada_max: numeroOuNull(values.umidade_recomendada_max),
       ciclo_medio_dias: numeroOuNull(values.ciclo_medio_dias),
-      temp_base_graus_dia: numeroOuNull(values.temp_base_graus_dia),
-      graus_dia_ciclo: numeroOuNull(values.graus_dia_ciclo),
+      // fora do formulário: mantém o que a cultura já tiver
+      temp_base_graus_dia: cultura?.temp_base_graus_dia ?? null,
+      graus_dia_ciclo: cultura?.graus_dia_ciclo ?? null,
     }
 
     const salva = await run(() =>
@@ -121,24 +120,6 @@ export function CulturaForm({ cultura, empresas, onSalva, onCancelar }: Props) {
           <Input id="umax" {...field('umidade_recomendada_max')} type="number" min={0} max={100} step="0.1" />
         </FormField>
       </FormGrid>
-
-      <fieldset className="flex flex-col gap-3 rounded-xl border p-4">
-        <legend className="px-1 text-sm font-semibold">Previsão pela temperatura (graus-dia)</legend>
-        <FormGrid>
-          <FormField label="Temperatura base (°C)" htmlFor="tbase">
-            <Input id="tbase" {...field('temp_base_graus_dia')} type="number" step="0.1" placeholder="10" />
-          </FormField>
-          <FormField label="Graus-dia do ciclo" htmlFor="gdd">
-            <Input id="gdd" {...field('graus_dia_ciclo')} type="number" min={1} step={1} placeholder="1800" />
-          </FormField>
-        </FormGrid>
-        <Hint>
-          Opcional. Com os dois preenchidos, a previsão de colheita passa a usar a temperatura
-          medida pelos sensores do lote: cada dia soma (mínima + máxima) ÷ 2 − temperatura base, e
-          a colheita é prevista para quando a soma desde o plantio atinge os graus-dia do ciclo.
-          Use os valores da variedade (agrônomo, Embrapa ou o histórico das safras).
-        </Hint>
-      </fieldset>
 
       <FormField label="Descrição" htmlFor="descricao">
         <Textarea id="descricao" {...field('descricao')} rows={3} maxLength={2000} />

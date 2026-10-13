@@ -127,6 +127,7 @@ export default function PropriedadesPage() {
           <PropriedadeForm
             key={dialogo.modo === 'editar' ? dialogo.propriedade.id : 'nova'}
             empresas={empresas}
+            propriedades={propriedades}
             propriedade={dialogo.modo === 'editar' ? dialogo.propriedade : undefined}
             onSalva={salva}
             onCancelar={fechar}

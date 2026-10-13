@@ -1,6 +1,8 @@
 import {
   BellRingIcon,
   BuildingIcon,
+  ChartSplineIcon,
+  FileTextIcon,
   CloudSunIcon,
   HomeIcon,
   LandPlotIcon,
@@ -82,6 +84,13 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       item('leiturasAlertas', 'Leituras e Alertas', 'Leituras recebidas dos sensores e alertas fora da faixa ideal', BellRingIcon),
       item('previsao', 'Previsão de Colheita', 'Estimativa de quando cada lote fica pronto para colher', CloudSunIcon),
+    ],
+  },
+  {
+    title: 'Análise',
+    items: [
+      item('analises', 'Análises', 'Compare lotes e safras e veja o tempo fora da faixa ideal', ChartSplineIcon),
+      item('relatorios', 'Relatórios', 'Relatórios de lote, propriedade, empresa e safras em PDF e CSV', FileTextIcon),
       item('mercado', 'Mercado e Exportação', 'Preços e dados de exportação das frutas', TrendingUpIcon),
     ],
   },

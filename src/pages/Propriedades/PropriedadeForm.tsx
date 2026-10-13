@@ -1,24 +1,27 @@
 import { useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import MapaNasa from '@/components/map/MapaNasa'
-import { SeletorImagem } from '@/components/map/SeletorImagem'
-import { CoordinateField } from '@/components/shared/CoordinateField'
+import { ContornoCampos } from '@/components/map/ContornoEditor'
+import { ImageryControls } from '@/components/map/ImageryControls'
+import MapaNasa, { type LoteNoMapa } from '@/components/map/MapaNasa'
 import { ErrorMessage, Hint } from '@/components/shared/EmptyState'
 import { FormActions } from '@/components/shared/FormActions'
 import { FormField, FormGrid } from '@/components/shared/FormField'
 import { LocalidadeFields } from '@/components/shared/LocalidadeFields'
 import { SelectField } from '@/components/shared/SelectField'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useAction } from '@/hooks/use-action'
-import { numeroOuNull } from '@/lib/format'
+import { useContorno } from '@/hooks/use-contorno'
+import { centroPoligono } from '@/lib/geo'
 import { ibgeService, propriedadesService } from '@/services'
+import { googleDisponivel } from '@/services/google-tiles.service'
 import type { ImagemDisponivel } from '@/services/nasa.service'
 import type { Empresa } from '@/types/empresa'
 import type { PropriedadeCompleta, StatusPropriedade } from '@/types/propriedade'
 
 type Props = {
   empresas: Empresa[]
+  /** Todas as propriedades: as da mesma empresa aparecem no mapa como referência. */
+  propriedades: PropriedadeCompleta[]
   /** Propriedade em edição; ausente no cadastro. */
   propriedade?: PropriedadeCompleta
   onSalva: (propriedade: PropriedadeCompleta, nova: boolean) => void
@@ -30,34 +33,38 @@ const STATUS_OPTIONS = [
   { value: 'INATIVA', label: 'Inativa' },
 ]
 
-export function PropriedadeForm({ empresas, propriedade, onSalva, onCancelar }: Props) {
+export function PropriedadeForm({ empresas, propriedades, propriedade, onSalva, onCancelar }: Props) {
   const [empresaId, setEmpresaId] = useState(String(propriedade?.empresa_id ?? ''))
   const [nome, setNome] = useState(propriedade?.nome ?? '')
   const [estado, setEstado] = useState(propriedade?.estado ?? '')
   const [municipio, setMunicipio] = useState(propriedade?.municipio ?? '')
-  const [area, setArea] = useState(propriedade?.area_total_ha?.toString() ?? '')
   const [status, setStatus] = useState<StatusPropriedade>(propriedade?.status ?? 'ATIVA')
-  // cada coordenada pode estar vazia enquanto o usuário digita
-  const [coordenadas, setCoordenadas] = useState<{ lat: number | null; lng: number | null }>({
-    lat: propriedade?.latitude ?? null,
-    lng: propriedade?.longitude ?? null,
-  })
-  const ponto =
-    coordenadas.lat !== null && coordenadas.lng !== null
-      ? { lat: coordenadas.lat, lng: coordenadas.lng }
-      : null
+  // a área é desenhada como a dos lotes; a API calcula dela a área em ha e o ponto central
+  const contorno = useContorno(propriedade?.geometria ?? null)
+  const poligono = contorno.poligono
   const [imagem, setImagem] = useState<ImagemDisponivel | null>(null)
+  const [referencias, setReferencias] = useState(true)
   // contorno do estado/município escolhido: o mapa dá zoom nele
-  const [contorno, setContorno] = useState<GeoJSON.GeoJsonObject | null>(null)
+  const [municipioNoMapa, setMunicipioNoMapa] = useState<GeoJSON.GeoJsonObject | null>(null)
   const ultimaBusca = useRef(0)
   const [erroLocal, setErroLocal] = useState('')
   const { run, pending, error } = useAction()
+
+  const centro = poligono
+    ? centroPoligono(poligono)
+    : propriedade?.latitude != null && propriedade.longitude != null
+      ? { lat: propriedade.latitude, lng: propriedade.longitude }
+      : null
+  // as outras propriedades da empresa, para não desenhar uma por cima da outra
+  const vizinhas: LoteNoMapa[] = propriedades
+    .filter((p) => p.empresa_id === Number(empresaId) && p.id !== propriedade?.id && p.geometria)
+    .map((p) => ({ id: p.id, nome: p.nome, poligono: p.geometria! }))
 
   /** Busca o contorno no IBGE; ignora respostas de escolhas anteriores. */
   function enquadrar(busca: Promise<GeoJSON.GeoJsonObject>) {
     const id = ++ultimaBusca.current
     busca
-      .then((geo) => id === ultimaBusca.current && setContorno(geo))
+      .then((geo) => id === ultimaBusca.current && setMunicipioNoMapa(geo))
       // sem contorno o mapa só não dá zoom; o formulário segue normal
       .catch(() => undefined)
   }
@@ -77,8 +84,9 @@ export function PropriedadeForm({ empresas, propriedade, onSalva, onCancelar }: 
   async function enviar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!propriedade && !empresaId) return setErroLocal('Selecione a empresa da propriedade.')
-    if ((coordenadas.lat === null) !== (coordenadas.lng === null))
-      return setErroLocal('Preencha latitude e longitude, ou deixe as duas em branco.')
+    if (contorno.cantosIncompletos)
+      return setErroLocal('Complete os dois cantos e a profundidade para fechar o retângulo.')
+    if (!poligono) return setErroLocal('Desenhe a área da propriedade no mapa.')
     setErroLocal('')
 
     const payload = {
@@ -86,10 +94,8 @@ export function PropriedadeForm({ empresas, propriedade, onSalva, onCancelar }: 
       nome,
       estado,
       municipio,
-      area_total_ha: numeroOuNull(area),
       status,
-      latitude: ponto?.lat ?? null,
-      longitude: ponto?.lng ?? null,
+      geometria: poligono,
     }
     const salva = await run(() =>
       propriedade
@@ -135,16 +141,6 @@ export function PropriedadeForm({ empresas, propriedade, onSalva, onCancelar }: 
             onEstadoChange={escolherEstado}
             onMunicipioChange={escolherMunicipio}
           />
-          <FormField label="Área total (ha)" htmlFor="area">
-            <Input
-              id="area"
-              type="number"
-              min={0}
-              step="0.01"
-              value={area}
-              onChange={(e) => setArea(e.target.value)}
-            />
-          </FormField>
           <FormField label="Status" htmlFor="status">
             <SelectField
               id="status"
@@ -155,34 +151,18 @@ export function PropriedadeForm({ empresas, propriedade, onSalva, onCancelar }: 
           </FormField>
         </FormGrid>
 
-        <fieldset className="flex flex-col gap-3 rounded-xl border p-4">
-          <legend className="px-1 text-sm font-medium">
-            Localização (sede ou centro da propriedade)
-          </legend>
-          <CoordinateField
-            idPrefix="propriedade"
-            lat={coordenadas.lat}
-            lng={coordenadas.lng}
-            onChange={(lat, lng) => setCoordenadas({ lat, lng })}
-          />
-          {ponto ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="w-fit"
-              onClick={() => setCoordenadas({ lat: null, lng: null })}
-            >
-              Remover localização
-            </Button>
-          ) : (
+        <ContornoCampos
+          editor={contorno}
+          entidade="propriedade"
+          legenda="Área da propriedade"
+          semContorno={
             <Hint>
-              Escolha o estado e o município para o mapa ir até lá. Você também pode
-              clicar no mapa para preencher as coordenadas. É por esse ponto que o mapa
-              abre ao cadastrar os lotes da propriedade.
+              Obrigatório. Escolha o estado e o município para o mapa ir até lá e desenhe a divisa
+              da propriedade. A área em hectares é calculada do desenho, e os lotes vão precisar
+              ficar dentro dela.
             </Hint>
-          )}
-        </fieldset>
+          }
+        />
 
         <ErrorMessage message={erroLocal || error} />
 
@@ -195,22 +175,28 @@ export function PropriedadeForm({ empresas, propriedade, onSalva, onCancelar }: 
 
       <aside className="flex min-w-0 flex-col gap-3">
         <MapaNasa
-          className="h-[26rem] lg:h-[32rem]"
-          centro={null}
-          poligono={null}
-          ponto={ponto}
-          contorno={contorno}
+          className="h-[26rem] lg:h-[34rem]"
+          centro={centro}
+          {...contorno.mapa}
+          contorno={municipioNoMapa}
+          lotes={vizinhas}
           imagem={imagem}
-          onMoverCentro={(lat, lng) => setCoordenadas({ lat, lng })}
+          referencias={referencias}
         />
-        {ponto && (
-          <SeletorImagem
-            lat={ponto.lat}
-            lng={ponto.lng}
-            selecionada={imagem}
-            onSelecionar={setImagem}
-          />
-        )}
+        <Hint>
+          {vizinhas.length > 0 && 'As outras propriedades da empresa aparecem tracejadas. '}
+          {municipioNoMapa && 'O limite do município aparece em branco tracejado. '}
+          {googleDisponivel
+            ? 'Aproxime bem o mapa para marcar a divisa com precisão.'
+            : 'As imagens são da NASA (30 m por pixel), por isso aparecem pixeladas em zoom alto.'}
+        </Hint>
+        <ImageryControls
+          centro={centro}
+          imagem={imagem}
+          onImagemChange={setImagem}
+          referencias={referencias}
+          onReferenciasChange={setReferencias}
+        />
       </aside>
     </form>
   )

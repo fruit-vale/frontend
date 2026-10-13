@@ -1,3 +1,4 @@
+import type { Poligono } from '@/lib/geo'
 import type { EmpresaResumo } from './auth'
 
 export type StatusPropriedade = 'ATIVA' | 'INATIVA'
@@ -11,6 +12,8 @@ export type Propriedade = {
   empresa_id: number
   latitude: number | null
   longitude: number | null
+  /** área desenhada no mapa; os lotes precisam ficar dentro dela */
+  geometria: Poligono | null
 }
 
 /** Formato completo devolvido por GET /propriedades. */
@@ -23,13 +26,12 @@ export type PropriedadeCompleta = Propriedade & {
   total_sensores: number
 }
 
+/** A área, a latitude e a longitude a API calcula do contorno. */
 export type PropriedadePayload = {
   empresa_id?: number
   nome: string
   estado: string
   municipio: string
-  area_total_ha: number | null
   status: StatusPropriedade
-  latitude: number | null
-  longitude: number | null
+  geometria: Poligono
 }

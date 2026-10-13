@@ -50,6 +50,11 @@ type Props = {
   ponto?: { lat: number; lng: number } | null
   /** Contorno de referência (ex.: município do IBGE); o mapa enquadra nele ao mudar. */
   contorno?: GeoJSON.GeoJsonObject | null
+  /**
+   * Área que contém o desenho (ex.: a propriedade, ao desenhar o lote): fica em
+   * destaque, enquadra o mapa e os cantos encaixam na divisa dela.
+   */
+  limite?: Poligono | null
   /** Outros lotes, em GeoJSON: vizinhos ao desenhar, ou todos na visão geral. */
   lotes?: LoteNoMapa[]
   /** Clique num dos `lotes` (visão geral); também deixa os nomes sempre visíveis. */
@@ -191,6 +196,7 @@ function MapaNasa({
   poligono,
   ponto = null,
   contorno = null,
+  limite = null,
   lotes = [],
   onClicarLote,
   imagem,
@@ -206,6 +212,7 @@ function MapaNasa({
   const forma = useRef<L.Polygon | null>(null)
   const marcador = useRef<L.Marker | null>(null)
   const camadaContorno = useRef<L.GeoJSON | null>(null)
+  const camadaLimite = useRef<L.Polygon | null>(null)
   const camadaLotes = useRef<L.GeoJSON | null>(null)
   const arrastando = useRef(false)
   const aoMover = useRef(onMoverCentro)
@@ -214,7 +221,7 @@ function MapaNasa({
   /** Último contorno enviado ao pai: quando ele volta pela prop, a camada já está igual. */
   const ultimoEnviado = useRef<string | null>(null)
   // enquadramento mais recente, aplicado quando o mapa ganha tamanho
-  const vista = useRef({ centro, poligono, ponto, contorno, lotes })
+  const vista = useRef({ centro, poligono, ponto, contorno, lotes, limite })
   /** O elemento já tem tamanho e a vista inicial foi aplicada. */
   const pronto = useRef(false)
 
@@ -228,7 +235,7 @@ function MapaNasa({
     aoMover.current = onMoverCentro
     aoAlterar.current = onAlterarPoligono
     aoClicarLote.current = onClicarLote
-    vista.current = { centro, poligono, ponto, contorno, lotes }
+    vista.current = { centro, poligono, ponto, contorno, lotes, limite }
   })
 
   // cria o mapa uma vez
@@ -273,9 +280,10 @@ function MapaNasa({
     mapa.current = m
 
     function enquadrar() {
-      const { poligono: p, ponto: pt, centro: c, contorno: ct, lotes: ls } = vista.current
+      const { poligono: p, ponto: pt, centro: c, contorno: ct, lotes: ls, limite: lm } = vista.current
       if (p) m.fitBounds(L.latLngBounds(verticesLeaflet(p)).pad(0.6), { maxZoom: ZOOM_ENQUADRAR })
       else if (pt) m.setView([pt.lat, pt.lng], ZOOM_PONTO)
+      else if (lm) m.fitBounds(L.latLngBounds(verticesLeaflet(lm)).pad(0.15), { maxZoom: ZOOM_ENQUADRAR })
       else if (ls.length)
         m.fitBounds(L.latLngBounds(ls.flatMap((l) => verticesLeaflet(l.poligono))).pad(0.3), {
           maxZoom: ZOOM_ENQUADRAR,
@@ -376,6 +384,27 @@ function MapaNasa({
     }).addTo(m)
     if (pronto.current) m.fitBounds(camadaContorno.current.getBounds())
   }, [contorno])
+
+  // área que limita o desenho (a propriedade do lote); sem preenchimento, para o
+  // clique passar para o mapa, e sem pmIgnore, para o Geoman encaixar nela
+  const chaveLimite = limite ? JSON.stringify(limite) : ''
+  useEffect(() => {
+    const m = mapa.current
+    if (!m) return
+    camadaLimite.current?.remove()
+    camadaLimite.current = null
+    const { limite: lm, poligono: p } = vista.current
+    if (!lm) return
+    camadaLimite.current = L.polygon(verticesLeaflet(lm), {
+      className: 'mapa-nasa__limite',
+      weight: 3,
+      fill: false,
+      interactive: false,
+    }).addTo(m)
+    camadaLimite.current.bringToBack()
+    if (pronto.current && !p)
+      m.fitBounds(camadaLimite.current.getBounds().pad(0.15), { maxZoom: ZOOM_ENQUADRAR })
+  }, [chaveLimite])
 
   // outros lotes como uma camada GeoJSON (FeatureCollection)
   useEffect(() => {

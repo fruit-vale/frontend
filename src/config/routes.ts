@@ -13,6 +13,8 @@ export const ROUTES = {
   sensores: '/sensores',
   leiturasAlertas: '/leituras-alertas',
   previsao: '/previsao',
+  analises: '/analises',
+  relatorios: '/relatorios',
   mercado: '/mercado',
   configuracoes: '/configuracoes',
 } as const
@@ -36,6 +38,9 @@ export const ROUTE_ROLES: Record<Exclude<RouteKey, 'login'>, Role[]> = {
   sensores: ['administrador', 'produtor'],
   leiturasAlertas: TODOS,
   previsao: TODOS,
+  // só leitura: o analista não cadastra nem edita nada nestas telas
+  analises: ['administrador', 'analista'],
+  relatorios: TODOS,
   mercado: ['administrador', 'analista'],
   configuracoes: ['administrador'],
 }

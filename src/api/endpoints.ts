@@ -23,6 +23,15 @@ export const ENDPOINTS = {
     porId: (id: number) => `/culturas/${id}`,
   },
   previsao: '/previsao',
+  alertas: '/alertas',
+  mercado: {
+    culturas: '/mercado/culturas',
+    atacado: '/mercado/atacado',
+    produtor: '/mercado/produtor',
+    exportacao: '/mercado/exportacao',
+    status: '/mercado/status',
+    atualizar: '/mercado/atualizar',
+  },
   lotes: {
     base: '/lotes',
     porId: (id: number) => `/lotes/${id}`,

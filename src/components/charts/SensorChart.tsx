@@ -8,8 +8,8 @@ import type { IntervaloSerie, Serie } from '@/types/painel'
 type Props = {
   series: Serie[]
   unidade: string | null
-  /** agregação dos pontos: por hora ou por dia */
-  intervalo: IntervaloSerie
+  /** agregação dos pontos: por hora, por dia ou, em séries mensais (mercado), por mês */
+  intervalo: IntervaloSerie | 'month'
   /** nome do dado, para o título acessível (ex.: "Temperatura") */
   titulo: string
   /** tamanho da janela, em dias: define o eixo do tempo quando não há leituras */
@@ -109,22 +109,38 @@ export function SensorChart({ series: todas, unidade, intervalo, titulo, dias, o
   const passos = [HORA, 3 * HORA, 6 * HORA, 12 * HORA, DIA, 2 * DIA, 7 * DIA, 14 * DIA]
   const passoX = passos.find((p) => (t1 - t0) / p <= maxMarcas) ?? 30 * DIA
   const marcasX: number[] = []
-  for (let t = Math.ceil(t0 / passoX) * passoX; t <= t1; t += passoX) marcasX.push(t)
+  if (intervalo === 'month') {
+    // séries mensais: marcas no dia 1 de cada mês, pulando meses se faltar espaço
+    const inicio = new Date(t0)
+    const meses = Math.round((t1 - t0) / (30 * DIA)) + 1
+    const pulo = Math.max(1, Math.ceil(meses / maxMarcas))
+    for (let i = 0; ; i += pulo) {
+      const t = Date.UTC(inicio.getUTCFullYear(), inicio.getUTCMonth() + i, 15)
+      if (t > t1) break
+      if (t >= t0) marcasX.push(t)
+    }
+  } else for (let t = Math.ceil(t0 / passoX) * passoX; t <= t1; t += passoX) marcasX.push(t)
   const fmtX = (t: number) =>
     new Date(t).toLocaleString(
       'pt-BR',
-      passoX < DIA ? { hour: '2-digit', minute: '2-digit' } : { day: '2-digit', month: '2-digit' },
+      passoX < DIA
+        ? { hour: '2-digit', minute: '2-digit' }
+        : intervalo === 'month'
+          ? { month: 'short', year: '2-digit' }
+          : { day: '2-digit', month: '2-digit' },
     )
   const fmtInstante = (i: string) =>
     new Date(i).toLocaleString(
       'pt-BR',
       intervalo === 'hour'
         ? { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }
-        : { day: '2-digit', month: '2-digit', year: 'numeric' },
+        : intervalo === 'month'
+          ? { month: 'long', year: 'numeric' }
+          : { day: '2-digit', month: '2-digit', year: 'numeric' },
     )
 
   // quebra a linha onde faltam pontos, em vez de ligar por cima da lacuna
-  const passoDados = intervalo === 'hour' ? HORA : DIA
+  const passoDados = intervalo === 'hour' ? HORA : intervalo === 'month' ? 31 * DIA : DIA
   const caminho = (s: Serie) => {
     let d = ''
     let anterior: number | null = null

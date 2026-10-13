@@ -16,6 +16,8 @@ const Cultivos = lazy(() => import('@/pages/cultivos/CultivosPage'))
 const Sensores = lazy(() => import('@/pages/sensores/SensoresPage'))
 const LeiturasAlertas = lazy(() => import('@/pages/leituras-alertas/LeiturasAlertasPage'))
 const Previsao = lazy(() => import('@/pages/previsao/PrevisaoPage'))
+const Analises = lazy(() => import('@/pages/analises/AnalisesPage'))
+const Relatorios = lazy(() => import('@/pages/relatorios/RelatoriosPage'))
 const Mercado = lazy(() => import('@/pages/mercado/MercadoPage'))
 const Configuracoes = lazy(() => import('@/pages/configuracoes/ConfiguracoesPage'))
 const Login = lazy(() => import('@/pages/login/LoginPage'))
@@ -34,6 +36,8 @@ const PAGINAS: { key: PaginaKey; element: React.ReactNode }[] = [
   { key: 'sensores', element: <Sensores /> },
   { key: 'leiturasAlertas', element: <LeiturasAlertas /> },
   { key: 'previsao', element: <Previsao /> },
+  { key: 'analises', element: <Analises /> },
+  { key: 'relatorios', element: <Relatorios /> },
   { key: 'mercado', element: <Mercado /> },
   { key: 'configuracoes', element: <Configuracoes /> },
 ]
