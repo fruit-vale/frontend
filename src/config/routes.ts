@@ -4,6 +4,11 @@ import type { Role } from '@/types/auth'
 export const ROUTES = {
   home: '/',
   login: '/login',
+  termos: '/termos',
+  /** Mapa público das propriedades cadastradas. */
+  mapaPublico: '/mapa',
+  /** Tela pública de aceite do contrato: /contrato/:token */
+  contrato: '/contrato',
   perfil: '/perfil',
   empresas: '/empresas',
   usuarios: '/usuarios',
@@ -27,7 +32,7 @@ const TODOS: Role[] = ['administrador', 'produtor', 'analista']
  * Quem pode abrir cada tela. É a única fonte: o roteador bloqueia o acesso e
  * o menu lateral esconde os itens a partir destes mesmos papéis.
  */
-export const ROUTE_ROLES: Record<Exclude<RouteKey, 'login'>, Role[]> = {
+export const ROUTE_ROLES: Record<Exclude<RouteKey, 'login' | 'termos' | 'contrato' | 'mapaPublico'>, Role[]> = {
   home: TODOS,
   perfil: TODOS,
   empresas: ['administrador'],

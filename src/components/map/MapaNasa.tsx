@@ -42,6 +42,17 @@ const BRASIL: [number, number] = [-14.2, -51.9]
 /** Lote desenhado como referência (vizinhos) ou na visão geral. */
 export type LoteNoMapa = { id: number; nome: string; poligono: Poligono }
 
+/** Propriedade marcada como ponto (mapa público): sem contorno, só o local. */
+export type PontoNoMapa = {
+  id: number
+  lat: number
+  lng: number
+  titulo: string
+  subtitulo?: string
+  /** Contorno da propriedade, desenhado além do pino. */
+  poligono?: Poligono | null
+}
+
 type Props = {
   /** Ponto inicial (ex.: a propriedade), usado quando não há polígono. */
   centro: { lat: number; lng: number } | null
@@ -57,6 +68,8 @@ type Props = {
   limite?: Poligono | null
   /** Outros lotes, em GeoJSON: vizinhos ao desenhar, ou todos na visão geral. */
   lotes?: LoteNoMapa[]
+  /** Vários locais marcados (ex.: propriedades); o mapa enquadra em todos. */
+  pontos?: PontoNoMapa[]
   /** Clique num dos `lotes` (visão geral); também deixa os nomes sempre visíveis. */
   onClicarLote?: (id: number) => void
   imagem: ImagemDisponivel | null
@@ -77,6 +90,27 @@ const iconeCentro = L.divIcon({
   className: 'mapa-nasa__centro',
   iconSize: [18, 18],
 })
+
+const iconePonto = L.divIcon({
+  className: 'mapa-nasa__propriedade',
+  iconSize: [20, 20],
+  iconAnchor: [10, 10],
+  popupAnchor: [0, -10],
+})
+
+/** Conteúdo do balão montado como DOM: os textos nunca viram HTML. */
+function balaoDoPonto(p: PontoNoMapa) {
+  const raiz = document.createElement('div')
+  const titulo = document.createElement('strong')
+  titulo.textContent = p.titulo
+  raiz.append(titulo)
+  if (p.subtitulo) {
+    const sub = document.createElement('div')
+    sub.textContent = p.subtitulo
+    raiz.append(sub)
+  }
+  return raiz
+}
 
 const ESTILO_LOTE: L.PathOptions = { className: 'mapa-nasa__lote', weight: 3 }
 
@@ -191,6 +225,13 @@ function poligonoDaCamada(camada: L.Polygon): Poligono {
   return poligonoDeVertices(anel)
 }
 
+function enquadrarPontos(m: L.Map, ps: PontoNoMapa[]) {
+  const coordenadas = ps.flatMap((p) =>
+    p.poligono ? verticesLeaflet(p.poligono) : [[p.lat, p.lng] as [number, number]],
+  )
+  m.fitBounds(L.latLngBounds(coordenadas).pad(0.2), { maxZoom: ZOOM_ENQUADRAR })
+}
+
 function MapaNasa({
   centro,
   poligono,
@@ -198,6 +239,7 @@ function MapaNasa({
   contorno = null,
   limite = null,
   lotes = [],
+  pontos = [],
   onClicarLote,
   imagem,
   referencias = true,
@@ -214,6 +256,7 @@ function MapaNasa({
   const camadaContorno = useRef<L.GeoJSON | null>(null)
   const camadaLimite = useRef<L.Polygon | null>(null)
   const camadaLotes = useRef<L.GeoJSON | null>(null)
+  const camadaPontos = useRef<L.LayerGroup | null>(null)
   const arrastando = useRef(false)
   const aoMover = useRef(onMoverCentro)
   const aoAlterar = useRef(onAlterarPoligono)
@@ -221,13 +264,14 @@ function MapaNasa({
   /** Último contorno enviado ao pai: quando ele volta pela prop, a camada já está igual. */
   const ultimoEnviado = useRef<string | null>(null)
   // enquadramento mais recente, aplicado quando o mapa ganha tamanho
-  const vista = useRef({ centro, poligono, ponto, contorno, lotes, limite })
+  const vista = useRef({ centro, poligono, ponto, contorno, lotes, limite, pontos })
   /** O elemento já tem tamanho e a vista inicial foi aplicada. */
   const pronto = useRef(false)
 
   const editavel = !!onAlterarPoligono
   // os lotes chegam como array novo a cada render: compara pelo conteúdo
   const chaveLotes = JSON.stringify(lotes)
+  const chavePontos = JSON.stringify(pontos)
   const clicavel = !!onClicarLote
 
   // declarado antes dos demais efeitos: eles leem os valores atuais
@@ -235,7 +279,7 @@ function MapaNasa({
     aoMover.current = onMoverCentro
     aoAlterar.current = onAlterarPoligono
     aoClicarLote.current = onClicarLote
-    vista.current = { centro, poligono, ponto, contorno, lotes, limite }
+    vista.current = { centro, poligono, ponto, contorno, lotes, limite, pontos }
   })
 
   // cria o mapa uma vez
@@ -280,7 +324,7 @@ function MapaNasa({
     mapa.current = m
 
     function enquadrar() {
-      const { poligono: p, ponto: pt, centro: c, contorno: ct, lotes: ls, limite: lm } = vista.current
+      const { poligono: p, ponto: pt, centro: c, contorno: ct, lotes: ls, limite: lm, pontos: ps } = vista.current
       if (p) m.fitBounds(L.latLngBounds(verticesLeaflet(p)).pad(0.6), { maxZoom: ZOOM_ENQUADRAR })
       else if (pt) m.setView([pt.lat, pt.lng], ZOOM_PONTO)
       else if (lm) m.fitBounds(L.latLngBounds(verticesLeaflet(lm)).pad(0.15), { maxZoom: ZOOM_ENQUADRAR })
@@ -288,6 +332,7 @@ function MapaNasa({
         m.fitBounds(L.latLngBounds(ls.flatMap((l) => verticesLeaflet(l.poligono))).pad(0.3), {
           maxZoom: ZOOM_ENQUADRAR,
         })
+      else if (ps.length) enquadrarPontos(m, ps)
       else if (c) m.setView([c.lat, c.lng], ZOOM_PONTO)
       else if (ct) m.fitBounds(L.geoJSON(ct).getBounds())
     }
@@ -375,7 +420,12 @@ function MapaNasa({
     if (!m) return
     camadaContorno.current?.remove()
     camadaContorno.current = null
-    if (!contorno) return
+    if (!contorno) {
+      // contorno removido (ex.: filtro de estado limpo): volta a enquadrar os locais
+      const { pontos: ps, poligono: p, ponto: pt } = vista.current
+      if (pronto.current && ps.length && !p && !pt) enquadrarPontos(m, ps)
+      return
+    }
 
     camadaContorno.current = L.geoJSON(contorno, {
       style: { className: 'mapa-nasa__contorno', weight: 2, fill: false },
@@ -446,6 +496,35 @@ function MapaNasa({
     if (pronto.current && !vista.current.poligono && !vista.current.ponto)
       m.fitBounds(camadaLotes.current.getBounds().pad(0.3), { maxZoom: ZOOM_ENQUADRAR })
   }, [chaveLotes, clicavel])
+
+  // locais marcados (propriedades); recria quando a lista muda
+  useEffect(() => {
+    const m = mapa.current
+    if (!m) return
+    camadaPontos.current?.remove()
+    camadaPontos.current = null
+    const { pontos: ps } = vista.current
+    if (!ps.length) return
+    camadaPontos.current = L.layerGroup(
+      ps.flatMap((p) => {
+        const pino = L.marker([p.lat, p.lng], {
+          icon: iconePonto,
+          title: p.titulo,
+          keyboard: true,
+        }).bindPopup(balaoDoPonto(p))
+        if (!p.poligono) return [pino]
+        const area = L.polygon(verticesLeaflet(p.poligono), {
+          className: 'mapa-nasa__area',
+          weight: 2,
+          pmIgnore: true,
+        }).bindPopup(balaoDoPonto(p))
+        return [area, pino]
+      }),
+    ).addTo(m)
+    // com um contorno de estado/município, é ele que dá o enquadramento
+    const { poligono: p, ponto: pt, contorno: ct } = vista.current
+    if (pronto.current && !p && !pt && !ct) enquadrarPontos(m, ps)
+  }, [chavePontos])
 
   // contorno do lote; atualiza a camada existente em vez de recriar
   useEffect(() => {

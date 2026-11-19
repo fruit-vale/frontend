@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import type { FormEvent } from 'react'
-import { Navigate, useLocation, useNavigate } from 'react-router-dom'
-import { Loader2Icon } from 'lucide-react'
-import loginImg from '@/assets/login-fruitvale.png'
+import type { CSSProperties, FormEvent } from 'react'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { ArrowLeftIcon, Loader2Icon } from 'lucide-react'
+import loginImg from '@/assets/landing-campo.webp'
 import { ErrorMessage } from '@/components/shared/EmptyState'
 import { FormField } from '@/components/shared/FormField'
 import { Button } from '@/components/ui/button'
@@ -14,6 +14,26 @@ import { useAction } from '@/hooks/use-action'
 import { useAuth } from '@/hooks/use-auth'
 
 type View = 'login' | 'recover'
+
+/**
+ * Painel claro fixo, independente do tema do sistema: os componentes do
+ * formulário leem estas variáveis, então ficam na paleta da marca.
+ */
+const PALETA = {
+  '--foreground': '#292B26',
+  '--muted-foreground': '#5d5f58',
+  '--card': '#ffffff',
+  '--card-foreground': '#292B26',
+  '--input': 'rgb(38 61 44 / 0.3)',
+  '--border': 'rgb(38 61 44 / 0.2)',
+  '--ring': '#263D2C',
+  '--primary': '#D8A943',
+  '--primary-foreground': '#263D2C',
+  '--destructive': '#a8281f',
+} as CSSProperties
+
+const CAMPO = 'h-11 rounded-md bg-white dark:bg-white'
+const LINK = 'text-[#263D2C] underline underline-offset-4 hover:text-[#607B55]'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -69,136 +89,180 @@ export default function LoginPage() {
   const mensagemErro = erroLocal || error
 
   return (
-    <div className="flex min-h-svh bg-[#171022]">
-      <div className="relative hidden flex-[1.5] lg:block">
-        <img src={loginImg} alt="" className="size-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent from-60% to-[#171022]" />
+    <div className="flex min-h-svh bg-[#F5F3EA] font-sans">
+      {/* foto com um tom único, só para dar leitura ao texto */}
+      <div className="relative hidden flex-[1.2] overflow-hidden bg-[#263D2C] lg:block">
+        <img src={loginImg} alt="" className="absolute inset-0 size-full object-cover" />
+        <div className="absolute inset-0 bg-[#1d2f22]/55" />
+        <div className="relative flex h-full flex-col justify-between p-10 text-white xl:p-14">
+          <Link to={ROUTES.home} className="flex items-center gap-2.5" aria-label="FruitVale">
+            <img src="/favicon.svg" alt="" className="size-9" />
+            <span className="font-heading text-2xl font-medium">FruitVale</span>
+          </Link>
+          <div>
+            <p className="max-w-md font-heading text-4xl leading-[1.12] font-medium text-balance">
+              Sua plantação, <span className="text-[#D8A943]">sob controle</span>, de onde você
+              estiver.
+            </p>
+            <p className="mt-4 max-w-md text-lg text-white/85">
+              Acompanhe cultivos, sensores e alertas da safra.
+            </p>
+          </div>
+        </div>
       </div>
 
-      {/* painel escuro fixo, independente do tema do sistema */}
-      <div className="dark flex min-w-0 flex-1 items-center justify-center bg-[#171022] p-6 text-foreground lg:min-w-[26rem]">
-        <div className="w-full max-w-sm">
-          {view === 'login' ? (
-            <form onSubmit={entrar} noValidate className="flex flex-col gap-5">
-              <div className="space-y-2">
-                <h1 className="text-3xl font-semibold text-[#f6f1e7]">
-                  Bem-vindo de volta!
-                </h1>
-                <p className="text-sm text-[#b7a6c9]">
-                  Acompanhe cultivos, sensores e alertas da safra.
-                </p>
-              </div>
+      <div
+        style={PALETA}
+        className="flex min-w-0 flex-1 flex-col bg-[#F5F3EA] p-6 text-foreground lg:min-w-[26rem]"
+      >
+        <div className="flex items-center justify-between">
+          <Link to={ROUTES.home} className="flex items-center gap-2 lg:invisible" aria-label="FruitVale">
+            <img src="/favicon.svg" alt="" className="size-7" />
+            <span className="font-heading text-lg font-medium text-[#263D2C]">FruitVale</span>
+          </Link>
+          <Link
+            to={ROUTES.home}
+            className="inline-flex items-center gap-1.5 text-sm text-[#292B26]/75 hover:text-[#263D2C]"
+          >
+            <ArrowLeftIcon className="size-4" aria-hidden /> Voltar ao site
+          </Link>
+        </div>
 
-              <FormField label="E-mail" htmlFor="email">
-                <Input
-                  id="email"
-                  type="email"
-                  name="email"
-                  placeholder="voce@fruitvale.com.br"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  autoComplete="username"
-                  className="h-10"
-                />
-              </FormField>
+        <div className="flex flex-1 items-center justify-center py-8">
+          <div className="w-full max-w-sm">
+            {view === 'login' ? (
+              <form onSubmit={entrar} noValidate className="flex flex-col gap-5">
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold tracking-[0.14em] text-[#607B55] uppercase">
+                    Área do cliente
+                  </p>
+                  <h1 className="font-heading text-3xl font-medium text-[#263D2C]">
+                    Bem-vindo de volta
+                  </h1>
+                  <p className="text-sm text-muted-foreground">
+                    Entre para ver como está a sua plantação.
+                  </p>
+                </div>
 
-              <FormField label="Senha" htmlFor="senha">
-                <Input
-                  id="senha"
-                  type="password"
-                  name="senha"
-                  placeholder="••••••••"
-                  value={senha}
-                  onChange={(e) => setSenha(e.target.value)}
-                  autoComplete="current-password"
-                  className="h-10"
-                />
-              </FormField>
-
-              <ErrorMessage message={mensagemErro} />
-
-              <div className="flex items-center justify-between gap-3 text-sm">
-                <Label className="cursor-pointer text-muted-foreground">
-                  <Checkbox
-                    checked={lembrar}
-                    onCheckedChange={(marcado) => setLembrar(marcado)}
+                <FormField label="E-mail" htmlFor="email">
+                  <Input
+                    id="email"
+                    type="email"
+                    name="email"
+                    placeholder="voce@empresa.com.br"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="username"
+                    className={CAMPO}
                   />
-                  Lembrar de mim
-                </Label>
-                <button
-                  type="button"
-                  className="text-[#e0a83d] underline-offset-4 hover:underline"
-                  onClick={() => {
-                    setErroLocal('')
-                    setError('')
-                    setView('recover')
-                  }}
-                >
-                  Esqueci minha senha
-                </button>
-              </div>
+                </FormField>
 
-              <Button type="submit" size="lg" className="h-10" disabled={pending}>
-                {pending && <Loader2Icon className="animate-spin" />}
-                {pending ? 'Entrando...' : 'Entrar'}
-              </Button>
+                <FormField label="Senha" htmlFor="senha">
+                  <Input
+                    id="senha"
+                    type="password"
+                    name="senha"
+                    placeholder="••••••••"
+                    value={senha}
+                    onChange={(e) => setSenha(e.target.value)}
+                    autoComplete="current-password"
+                    className={CAMPO}
+                  />
+                </FormField>
 
-              <p className="text-center text-sm text-[#b7a6c9]">
-                Ainda não tem conta? Fale com o administrador.
-              </p>
-            </form>
-          ) : (
-            <form onSubmit={recuperar} noValidate className="flex flex-col gap-5">
-              <h1 className="text-3xl font-semibold text-[#f6f1e7]">Recuperar senha</h1>
+                <ErrorMessage message={mensagemErro} />
 
-              {recoverEnviado ? (
-                <>
-                  <p className="text-sm text-[#b7a6c9]">
-                    Se <strong className="text-[#f6f1e7]">{recoverEmail}</strong>{' '}
-                    estiver cadastrado, você vai receber um link de recuperação em
-                    instantes.
-                  </p>
-                  <Button type="button" size="lg" className="h-10" onClick={voltarParaLogin}>
-                    Voltar para o login
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <p className="text-sm text-[#b7a6c9]">
-                    Informe o e-mail cadastrado e enviaremos um link para
-                    redefinir sua senha.
-                  </p>
-
-                  <FormField label="E-mail" htmlFor="recover-email">
-                    <Input
-                      id="recover-email"
-                      type="email"
-                      name="recover-email"
-                      placeholder="voce@fruitvale.com.br"
-                      value={recoverEmail}
-                      onChange={(e) => setRecoverEmail(e.target.value)}
-                      autoComplete="username"
-                      className="h-10"
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <Label className="cursor-pointer text-muted-foreground">
+                    <Checkbox
+                      checked={lembrar}
+                      onCheckedChange={(marcado) => setLembrar(marcado)}
                     />
-                  </FormField>
-
-                  <ErrorMessage message={erroLocal} />
-
-                  <Button type="submit" size="lg" className="h-10">
-                    Enviar link de recuperação
-                  </Button>
-
+                    Lembrar de mim
+                  </Label>
                   <button
                     type="button"
-                    className="text-center text-sm text-[#e0a83d] underline-offset-4 hover:underline"
-                    onClick={voltarParaLogin}
+                    className={LINK}
+                    onClick={() => {
+                      setErroLocal('')
+                      setError('')
+                      setView('recover')
+                    }}
                   >
-                    Voltar para o login
+                    Esqueci minha senha
                   </button>
-                </>
-              )}
-            </form>
-          )}
+                </div>
+
+                <Button type="submit" size="lg" className="h-11 rounded-md font-semibold" disabled={pending}>
+                  {pending && <Loader2Icon className="animate-spin" />}
+                  {pending ? 'Entrando...' : 'Entrar'}
+                </Button>
+
+                <p className="text-center text-sm text-muted-foreground">
+                  Ainda não tem conta? Fale com o administrador.
+                </p>
+
+                <p className="text-center text-xs text-muted-foreground">
+                  Ao entrar, você concorda com os{' '}
+                  <Link to={ROUTES.termos} className={LINK}>
+                    Termos de Uso e a Política de Privacidade
+                  </Link>
+                  .
+                </p>
+              </form>
+            ) : (
+              <form onSubmit={recuperar} noValidate className="flex flex-col gap-5">
+                <h1 className="font-heading text-3xl font-medium text-[#263D2C]">
+                  Recuperar senha
+                </h1>
+
+                {recoverEnviado ? (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      Se <strong className="text-[#263D2C]">{recoverEmail}</strong> estiver
+                      cadastrado, você vai receber um link de recuperação em instantes.
+                    </p>
+                    <Button type="button" size="lg" className="h-11 rounded-md font-semibold" onClick={voltarParaLogin}>
+                      Voltar para o login
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      Informe o e-mail cadastrado e enviaremos um link para redefinir sua senha.
+                    </p>
+
+                    <FormField label="E-mail" htmlFor="recover-email">
+                      <Input
+                        id="recover-email"
+                        type="email"
+                        name="recover-email"
+                        placeholder="voce@empresa.com.br"
+                        value={recoverEmail}
+                        onChange={(e) => setRecoverEmail(e.target.value)}
+                        autoComplete="username"
+                        className={CAMPO}
+                      />
+                    </FormField>
+
+                    <ErrorMessage message={erroLocal} />
+
+                    <Button type="submit" size="lg" className="h-11 rounded-md font-semibold">
+                      Enviar link de recuperação
+                    </Button>
+
+                    <button
+                      type="button"
+                      className={`${LINK} text-center text-sm`}
+                      onClick={voltarParaLogin}
+                    >
+                      Voltar para o login
+                    </button>
+                  </>
+                )}
+              </form>
+            )}
+          </div>
         </div>
       </div>
     </div>

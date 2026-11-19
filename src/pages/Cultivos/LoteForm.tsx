@@ -39,7 +39,7 @@ type Props = {
 }
 
 export function LoteForm({ propriedades, culturas, lotes, lote, onSalvo, onCancelar }: Props) {
-  const [nome, setNome] = useState(lote?.nome_identificacao ?? '')
+  const [nome] = useState(lote?.nome_identificacao ?? '')
   const [propriedadeId, setPropriedadeId] = useState(
     String(lote?.propriedade.id ?? (propriedades.length === 1 ? propriedades[0].id : '')),
   )
@@ -62,6 +62,16 @@ export function LoteForm({ propriedades, culturas, lotes, lote, onSalvo, onCance
   // sem safra em andamento: cultura, datas e situação vêm da última safra
   const colhido = !!lote && lote.safra_atual_id === null
   const propriedade = propriedades.find((p) => p.id === Number(propriedadeId))
+  const nomeAutomatico = (() => {
+    const nomes = new Set(
+      lotes
+        .filter((l) => l.propriedade.id === Number(propriedadeId))
+        .map((l) => l.nome_identificacao.toLocaleLowerCase('pt-BR')),
+    )
+    let numero = 1
+    while (nomes.has(`lote ${numero}`)) numero += 1
+    return `Lote ${numero}`
+  })()
   // culturas da plataforma e da empresa dona da propriedade
   const culturasDisponiveis = culturas.filter(
     (c) => !c.empresa || c.empresa.id === propriedade?.empresa_id,
@@ -100,12 +110,12 @@ export function LoteForm({ propriedades, culturas, lotes, lote, onSalvo, onCance
     setErroLocal('')
 
     const payload = {
-      nome_identificacao: nome,
+      nome_identificacao: lote ? nome : nomeAutomatico,
       propriedade_id: propriedade.id,
       cultura_id: cultura.id,
       data_plantio: dataPlantio || null,
       previsao_colheita: previsao || null,
-      situacao,
+      situacao: lote ? situacao : 'EM_CULTIVO',
       geometria: poligono,
       area_ha: poligono ? null : numeroOuNull(areaManual),
     }
@@ -144,11 +154,11 @@ export function LoteForm({ propriedades, culturas, lotes, lote, onSalvo, onCance
           <FormField label="Identificação" htmlFor="identificacao" required>
             <Input
               id="identificacao"
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
+              value={lote ? nome : nomeAutomatico}
               maxLength={50}
               placeholder="Lote A1"
               required
+              readOnly
               autoFocus
             />
           </FormField>
@@ -204,7 +214,7 @@ export function LoteForm({ propriedades, culturas, lotes, lote, onSalvo, onCance
                 // apagou a data: volta a calcular pelo ciclo
                 setPrevisaoManual(e.target.value !== '')
               }}
-              disabled={colhido}
+              disabled={colhido || !lote}
             />
           </FormField>
           <FormField label="Situação" htmlFor="situacao">
@@ -213,7 +223,7 @@ export function LoteForm({ propriedades, culturas, lotes, lote, onSalvo, onCance
               value={situacao}
               onValueChange={(v) => setSituacao(v as SituacaoLote)}
               options={opcoesSituacao}
-              disabled={colhido}
+              disabled={colhido || !lote}
             />
           </FormField>
         </FormGrid>

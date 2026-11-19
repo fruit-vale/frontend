@@ -9,6 +9,13 @@ export const ENDPOINTS = {
   },
   empresas: {
     base: '/empresas',
+    porId: (id: number) => `/empresas/${id}`,
+    reenviarContrato: (id: number) => `/empresas/${id}/contrato/reenviar`,
+  },
+  contrato: {
+    porToken: (token: string) => `/contrato/${encodeURIComponent(token)}`,
+    aceitar: (token: string) =>
+      `/contrato/${encodeURIComponent(token)}/aceitar`,
   },
   usuarios: {
     base: '/usuarios',
@@ -17,6 +24,10 @@ export const ENDPOINTS = {
   propriedades: {
     base: '/propriedades',
     porId: (id: number) => `/propriedades/${id}`,
+  },
+  publico: {
+    propriedades: '/publico/propriedades',
+    empresas: '/publico/empresas',
   },
   culturas: {
     base: '/culturas',

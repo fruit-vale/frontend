@@ -18,7 +18,7 @@ import { ROUTES, ROUTE_ROLES, type RouteKey } from './routes'
 import type { Role } from '@/types/auth'
 
 export type NavItem = {
-  key: Exclude<RouteKey, 'login'>
+  key: Exclude<RouteKey, 'login' | 'termos' | 'contrato' | 'mapaPublico'>
   to: string
   label: string
   /** dica ao passar o mouse: o que se faz na tela */

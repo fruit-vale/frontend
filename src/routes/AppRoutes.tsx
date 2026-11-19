@@ -21,9 +21,12 @@ const Relatorios = lazy(() => import('@/pages/relatorios/RelatoriosPage'))
 const Mercado = lazy(() => import('@/pages/mercado/MercadoPage'))
 const Configuracoes = lazy(() => import('@/pages/configuracoes/ConfiguracoesPage'))
 const Login = lazy(() => import('@/pages/login/LoginPage'))
+const MapaPublico = lazy(() => import('@/pages/mapa-publico/MapaPublicoPage'))
+const Termos = lazy(() => import('@/pages/legal/TermosPage'))
+const Contrato = lazy(() => import('@/pages/contrato/ContratoPage'))
 const NotFound = lazy(() => import('@/pages/NotFoundPage'))
 
-type PaginaKey = Exclude<RouteKey, 'login' | 'home'>
+type PaginaKey = Exclude<RouteKey, 'login' | 'termos' | 'contrato' | 'mapaPublico' | 'home'>
 
 /** Telas com controle de acesso; os papéis vêm de ROUTE_ROLES. */
 const PAGINAS: { key: PaginaKey; element: React.ReactNode }[] = [
@@ -46,6 +49,9 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path={ROUTES.login} element={<Login />} />
+      <Route path={ROUTES.termos} element={<Termos />} />
+      <Route path={ROUTES.mapaPublico} element={<MapaPublico />} />
+      <Route path={`${ROUTES.contrato}/:token`} element={<Contrato />} />
 
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>

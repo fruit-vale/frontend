@@ -144,8 +144,43 @@
   body {
     @apply min-w-80 bg-background text-foreground antialiased;
   }
+  /* sem cursor piscando ao clicar em texto; os campos de digitação mantêm o deles */
+  body {
+    caret-color: transparent;
+  }
+  input,
+  textarea,
+  select,
+  [contenteditable='true'] {
+    caret-color: auto;
+  }
   h1,
   h2 {
     @apply font-heading;
+  }
+}
+
+/* faixa de empresas da landing: duas cópias lado a lado, deslocadas em 50% */
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.marquee__trilho {
+  animation: marquee 70s linear infinite;
+}
+
+.marquee:hover .marquee__trilho {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee {
+    overflow-x: auto;
+  }
+
+  .marquee__trilho {
+    animation: none;
   }
 }

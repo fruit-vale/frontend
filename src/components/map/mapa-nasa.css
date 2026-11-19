@@ -98,3 +98,26 @@
 
   cursor: grab;
 }
+
+/* propriedades no mapa público: pino simples, sem contorno */
+.mapa-nasa__propriedade {
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+
+  background-color: #e0a83d;
+  box-shadow: 0 0 0 2px rgba(8, 6, 13, 0.45);
+
+  cursor: pointer;
+}
+
+/* contorno da propriedade no mapa público */
+.mapa-nasa__area {
+  stroke: #e0a83d;
+  fill: #e0a83d;
+  fill-opacity: 0.22;
+  cursor: pointer;
+}
+
+.mapa-nasa__area:hover {
+  fill-opacity: 0.4;
+}

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { useAction } from '@/hooks/use-action'
 import { useForm } from '@/hooks/use-form'
 import { empresasService } from '@/services'
-import type { Empresa } from '@/types/empresa'
+import type { Empresa, EmpresaCriada } from '@/types/empresa'
 
 const formVazio = {
   razao_social: '',
@@ -20,18 +20,36 @@ const formVazio = {
 }
 
 type Props = {
-  onCriada: (empresa: Empresa) => void
+  /** Com a empresa, o formulário edita; sem ela, cadastra. */
+  empresa?: Empresa
+  onCriada?: (empresa: EmpresaCriada) => void
+  onSalva?: (empresa: Empresa) => void
   onCancelar: () => void
 }
 
-export function NovaEmpresaForm({ onCriada, onCancelar }: Props) {
-  const { values, set, field } = useForm(formVazio)
+const dosDados = (e: Empresa) => ({
+  razao_social: e.razao_social,
+  cpf_cnpj: e.cpf_cnpj,
+  responsavel: e.responsavel ?? '',
+  email: e.email ?? '',
+  telefone: e.telefone ?? '',
+  estado: e.estado ?? '',
+  cidade: e.cidade ?? '',
+})
+
+export function NovaEmpresaForm({ empresa, onCriada, onSalva, onCancelar }: Props) {
+  const { values, set, field } = useForm(empresa ? dosDados(empresa) : formVazio)
   const { run, pending, error } = useAction()
 
   async function enviar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (empresa) {
+      const salva = await run(() => empresasService.atualizar(empresa.id, values))
+      if (salva) onSalva?.(salva)
+      return
+    }
     const criada = await run(() => empresasService.criar(values))
-    if (criada) onCriada(criada)
+    if (criada) onCriada?.(criada)
   }
 
   return (
@@ -53,8 +71,17 @@ export function NovaEmpresaForm({ onCriada, onCancelar }: Props) {
         <FormField label="Responsável" htmlFor="responsavel">
           <Input id="responsavel" {...field('responsavel')} maxLength={100} />
         </FormField>
-        <FormField label="E-mail" htmlFor="email">
-          <Input id="email" {...field('email')} type="email" maxLength={100} />
+        <FormField
+          label="E-mail do responsável"
+          htmlFor="email"
+          required
+          hint={
+            empresa
+              ? 'Mudar o e-mail não reenvia o contrato. Se ele ainda estiver pendente, use “Reenviar contrato”.'
+              : 'O contrato de serviço será enviado para este e-mail. O acesso só é liberado depois do aceite.'
+          }
+        >
+          <Input id="email" {...field('email')} type="email" maxLength={100} required />
         </FormField>
         <FormField label="Telefone" htmlFor="telefone">
           <Input id="telefone" {...field('telefone')} type="tel" maxLength={20} />
@@ -77,7 +104,7 @@ export function NovaEmpresaForm({ onCriada, onCancelar }: Props) {
       <ErrorMessage message={error} />
 
       <FormActions
-        submitLabel="Cadastrar empresa"
+        submitLabel={empresa ? 'Salvar alterações' : 'Cadastrar e enviar contrato'}
         pending={pending}
         onCancel={onCancelar}
       />
