@@ -3,6 +3,7 @@ import {
   BuildingIcon,
   ChartSplineIcon,
   FileTextIcon,
+  BadgeDollarSignIcon,
   CloudSunIcon,
   HomeIcon,
   LandPlotIcon,
@@ -84,6 +85,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       item('leiturasAlertas', 'Leituras e Alertas', 'Leituras recebidas dos sensores e alertas fora da faixa ideal', BellRingIcon),
       item('previsao', 'Previsão de Colheita', 'Estimativa de quando cada lote fica pronto para colher', CloudSunIcon),
+      item('previsaoPreco', 'Previsão de Preço', 'Para onde o preço da uva e da manga vai nas próximas semanas', BadgeDollarSignIcon),
     ],
   },
   {

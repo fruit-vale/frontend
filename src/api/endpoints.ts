@@ -34,6 +34,11 @@ export const ENDPOINTS = {
     porId: (id: number) => `/culturas/${id}`,
   },
   previsao: '/previsao',
+  previsaoPreco: {
+    base: '/previsao/preco',
+    status: '/previsao/preco/status',
+    treinar: '/previsao/preco/treinar',
+  },
   alertas: '/alertas',
   mercado: {
     culturas: '/mercado/culturas',
