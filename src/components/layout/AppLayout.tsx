@@ -1,7 +1,8 @@
-import { Suspense } from 'react'
+import { Suspense, useLayoutEffect } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { ROUTES } from '@/config/routes'
 import { useAuth } from '@/hooks/use-auth'
+import { useTheme } from '@/hooks/use-theme'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { ErrorBoundary } from '@/components/shared/ErrorBoundary'
 import { Separator } from '@/components/ui/separator'
@@ -33,6 +34,13 @@ const iniciais = (nome: string) => {
 export function AppLayout() {
   const { pathname } = useLocation()
   const { user } = useAuth()
+  const { setAreaLogada } = useTheme()
+
+  // a paleta escolhida (Uva ou Vale) só vale enquanto uma tela logada está aberta
+  useLayoutEffect(() => {
+    setAreaLogada(true)
+    return () => setAreaLogada(false)
+  }, [setAreaLogada])
 
   return (
     <SidebarProvider>

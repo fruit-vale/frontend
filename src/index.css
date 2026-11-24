@@ -87,6 +87,46 @@
   --sidebar-border: rgb(255 255 255 / 0.1);
 }
 
+/*
+ * Paleta "Vale" das telas logadas: o verde e o amarelo da landing e do login
+ * (#263D2C, #607B55, #D8A943, creme #F5F3EA). Só modo claro: o ThemeProvider
+ * tira a classe .dark enquanto ela está ativa. Os gráficos mantêm a paleta
+ * categórica validada (--chart-*), igual à da Uva.
+ */
+html[data-paleta='vale'] {
+  --background: #f5f3ea;
+  --foreground: #292b26;
+  --card: #ffffff;
+  --card-foreground: #292b26;
+  --popover: #ffffff;
+  --popover-foreground: #292b26;
+  --primary: #263d2c;
+  --primary-foreground: #ffffff;
+  --secondary: #e7ece2;
+  --secondary-foreground: #263d2c;
+  --muted: #efece2;
+  --muted-foreground: #5d5f58;
+  --accent: #e7ece2;
+  --accent-foreground: #263d2c;
+  --destructive: #a8281f;
+  --success: #2a6e3f;
+  --success-soft: #e8f5ec;
+  --warning: #8a6410;
+  --warning-soft: #fbf3df;
+  --border: #e3e0d4;
+  --input: #d6d2c4;
+  --ring: #607b55;
+
+  --sidebar: #263d2c;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #d8a943;
+  --sidebar-primary-foreground: #1d2f22;
+  --sidebar-accent: rgb(255 255 255 / 0.12);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgb(255 255 255 / 0.14);
+  --sidebar-ring: #d8a943;
+}
+
 @theme inline {
   --font-sans: "Schibsted Grotesk", "Segoe UI", system-ui, sans-serif;
   --font-heading: "Fraunces", Georgia, serif;

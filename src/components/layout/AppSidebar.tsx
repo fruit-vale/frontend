@@ -3,10 +3,12 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { Collapsible } from '@base-ui/react/collapsible'
 import {
   ChevronDownIcon,
+  GrapeIcon,
   LogOutIcon,
   MonitorIcon,
   MoonIcon,
   SettingsIcon,
+  SproutIcon,
   SunIcon,
   UserRoundIcon,
 } from 'lucide-react'
@@ -24,8 +26,11 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { BRAND_ICON, NAV_SECTIONS } from '@/config/navigation'
@@ -33,7 +38,7 @@ import { ROUTES, ROUTE_ROLES } from '@/config/routes'
 import { useAuth } from '@/hooks/use-auth'
 import { useTheme } from '@/hooks/use-theme'
 import { ROLE_LABELS } from '@/types/auth'
-import type { Theme } from '@/contexts/theme-context'
+import type { Paleta, Theme } from '@/contexts/theme-context'
 
 // seções do menu abertas ou fechadas (só neste navegador)
 const CHAVE_SECOES = 'fruitvale:menu-secoes'
@@ -60,9 +65,16 @@ const TEMAS: { value: Theme; label: string; icon: typeof SunIcon }[] = [
   { value: 'system', label: 'Sistema', icon: MonitorIcon },
 ]
 
+const PALETAS: { value: Paleta; label: string; icon: typeof SunIcon }[] = [
+  { value: 'uva', label: 'Uva (roxo)', icon: GrapeIcon },
+  { value: 'vale', label: 'Vale (verde e amarelo)', icon: SproutIcon },
+]
+
 export function AppSidebar() {
   const { user, logout } = useAuth()
-  const { theme, setTheme } = useTheme()
+  const { theme, setTheme, paleta, setPaleta } = useTheme()
+  // a paleta Vale só tem modo claro
+  const soClaro = paleta === 'vale'
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const { isMobile, setOpenMobile } = useSidebar()
@@ -94,7 +106,7 @@ export function AppSidebar() {
     navigate(ROUTES.login)
   }
 
-  const TemaAtual = TEMAS.find((t) => t.value === theme)?.icon ?? SunIcon
+  const TemaAtual = soClaro ? SunIcon : (TEMAS.find((t) => t.value === theme)?.icon ?? SunIcon)
 
   return (
     <Sidebar>
@@ -217,17 +229,41 @@ export function AppSidebar() {
                 <span>Aparência</span>
               </DropdownMenuTrigger>
               <DropdownMenuContent side="top" align="start">
-                <DropdownMenuRadioGroup
-                  value={theme}
-                  onValueChange={(valor) => setTheme(valor as Theme)}
-                >
-                  {TEMAS.map(({ value, label, icon: Icone }) => (
-                    <DropdownMenuRadioItem key={value} value={value}>
-                      <Icone />
-                      {label}
-                    </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuRadioGroup>
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>Cores</DropdownMenuLabel>
+                  <DropdownMenuRadioGroup
+                    value={paleta}
+                    onValueChange={(valor) => setPaleta(valor as Paleta)}
+                  >
+                    {PALETAS.map(({ value, label, icon: Icone }) => (
+                      <DropdownMenuRadioItem key={value} value={value}>
+                        <Icone />
+                        {label}
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>
+                    {soClaro ? 'Modo (a paleta Vale é só clara)' : 'Modo'}
+                  </DropdownMenuLabel>
+                  <DropdownMenuRadioGroup
+                    value={soClaro ? 'light' : theme}
+                    onValueChange={(valor) => setTheme(valor as Theme)}
+                  >
+                    {TEMAS.map(({ value, label, icon: Icone }) => (
+                      <DropdownMenuRadioItem
+                        key={value}
+                        value={value}
+                        disabled={soClaro && value !== 'light'}
+                      >
+                        <Icone />
+                        {label}
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuGroup>
               </DropdownMenuContent>
             </DropdownMenu>
           </SidebarMenuItem>
